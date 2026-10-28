@@ -1,0 +1,172 @@
+"""Validated prototype reverse-engineering tools backed by the observation ledger."""
+
+from __future__ import annotations
+
+import os
+import re
+from collections.abc import Mapping
+from dataclasses import dataclass
+from pathlib import Path
+
+import capstone
+import lief
+
+from egre.ledger.constants import extract_constants
+from egre.ledger.store import Anchor, Ledger, LedgerReader, ObservationKind
+from egre.runner.executor import run_program
+
+_INPUT = re.compile(r"(?:[0-9a-fA-F]{2})*")
+_MAX_INSTRUCTIONS = 256
+_MAX_MEMORY_BYTES = 4096
+_MAX_INPUT_BYTES = 4096
+
+
+class ToolError(RuntimeError):
+    """A validated tool could not produce an observation."""
+
+
+class ToolValidationError(ToolError):
+    """An agent tool request is malformed or outside the target function."""
+
+
+@dataclass(frozen=True)
+class ToolResult:
+    """Compact agent-visible view of a recorded tool observation."""
+
+    handle: str
+    kind: ObservationKind
+    anchor: Anchor
+    content: str | int
+    facts: frozenset[int]
+
+
+def _required_int(task: Mapping[str, object], key: str) -> int:
+    value = task.get(key)
+    if isinstance(value, bool) or not isinstance(value, int):
+        raise ToolValidationError(f"task {key} must be an integer")
+    return value
+
+
+def _required_str(task: Mapping[str, object], key: str) -> str:
+    value = task.get(key)
+    if not isinstance(value, str) or not value:
+        raise ToolValidationError(f"task {key} must be a non-empty string")
+    return value
+
+
+class MediatorTools:
+    """Allowlisted tools; callers receive views, never ledger write access."""
+
+    def __init__(
+        self,
+        task: Mapping[str, object],
+        *,
+        root: str | os.PathLike[str] = ".",
+        ledger: Ledger | None = None,
+    ) -> None:
+        self._function_addr = _required_int(task, "function_addr")
+        self._function_size = _required_int(task, "function_size")
+        if self._function_addr < 0 or self._function_size <= 0:
+            raise ToolValidationError("task function range must be non-empty and non-negative")
+
+        binary_value = _required_str(task, "binary")
+        binary_path = Path(binary_value)
+        self._binary_path = binary_path if binary_path.is_absolute() else Path(root) / binary_path
+        self._ledger = ledger if ledger is not None else Ledger()
+        self.observations: LedgerReader = self._ledger.reader()
+
+        binary = lief.parse(self._binary_path)
+        if not isinstance(binary, lief.MachO.Binary):
+            raise ToolError(f"could not parse thin Mach-O binary: {self._binary_path}")
+        self._binary = binary
+
+    @property
+    def _function_end(self) -> int:
+        return self._function_addr + self._function_size
+
+    def _validate_range(self, addr: int, size: int, *, max_size: int) -> None:
+        if isinstance(addr, bool) or not isinstance(addr, int):
+            raise ToolValidationError("address must be an integer")
+        if isinstance(size, bool) or not isinstance(size, int) or not 1 <= size <= max_size:
+            raise ToolValidationError(f"size must be between 1 and {max_size}")
+        if addr < self._function_addr or addr + size > self._function_end:
+            raise ToolValidationError("requested range is outside the target function")
+
+    def disassemble(self, addr: int, count: int) -> ToolResult:
+        if isinstance(count, bool) or not isinstance(count, int) or not 1 <= count <= _MAX_INSTRUCTIONS:
+            raise ToolValidationError(f"count must be between 1 and {_MAX_INSTRUCTIONS}")
+        if isinstance(addr, bool) or not isinstance(addr, int) or addr % 4 != 0:
+            raise ToolValidationError("address must be a four-byte-aligned integer")
+        if not self._function_addr <= addr < self._function_end:
+            raise ToolValidationError("address is outside the target function")
+
+        available = self._function_end - addr
+        content = bytes(self._binary.get_content_from_virtual_address(addr, available))
+        disassembler = capstone.Cs(capstone.CS_ARCH_ARM64, capstone.CS_MODE_LITTLE_ENDIAN)
+        instructions = tuple(disassembler.disasm(content, addr, count))
+        if not instructions:
+            raise ToolError("disassembler produced no instructions")
+
+        lines = tuple(
+            f"{instruction.address:#x}: {instruction.mnemonic} {instruction.op_str}".rstrip()
+            for instruction in instructions
+        )
+        anchor = Anchor(start=addr, end=instructions[-1].address + instructions[-1].size)
+        facts = frozenset(extract_constants(lines))
+        payload = "\n".join(lines)
+        observation = self._ledger.record(
+            kind="disasm",
+            tool="disassemble",
+            args={"addr": addr, "count": count},
+            anchor=anchor,
+            payload=payload,
+            facts=facts,
+        )
+        return ToolResult(observation.handle, observation.kind, anchor, payload, facts)
+
+    def read_memory(self, addr: int, n: int) -> ToolResult:
+        self._validate_range(addr, n, max_size=_MAX_MEMORY_BYTES)
+        content = bytes(self._binary.get_content_from_virtual_address(addr, n))
+        if len(content) != n:
+            raise ToolError(f"binary returned {len(content)} bytes for a {n}-byte request")
+
+        payload = content.hex()
+        facts = frozenset(
+            int.from_bytes(content[offset : offset + width], "little")
+            for width in (2, 4, 8)
+            for offset in range(0, len(content) - width + 1, width)
+        )
+        anchor = Anchor(start=addr, end=addr + n)
+        observation = self._ledger.record(
+            kind="memory",
+            tool="read_memory",
+            args={"addr": addr, "n": n},
+            anchor=anchor,
+            payload=payload,
+            facts=facts,
+        )
+        return ToolResult(observation.handle, observation.kind, anchor, payload, facts)
+
+    def run(self, input_hex: str) -> ToolResult:
+        if not isinstance(input_hex, str) or _INPUT.fullmatch(input_hex) is None:
+            raise ToolValidationError("input must be even-length hexadecimal")
+        if len(input_hex) // 2 > _MAX_INPUT_BYTES:
+            raise ToolValidationError(f"input must be at most {_MAX_INPUT_BYTES} bytes")
+
+        output = run_program(self._binary_path, input_hex)
+        anchor = Anchor(start=self._function_addr, end=self._function_end)
+        observation = self._ledger.record(
+            kind="run",
+            tool="run",
+            args={"input_hex": input_hex},
+            anchor=anchor,
+            payload=output,
+        )
+        return ToolResult(
+            observation.handle,
+            observation.kind,
+            anchor,
+            output,
+            frozenset(),
+        )
+

@@ -15,7 +15,7 @@ status: done | depends: P-01 | owner: agent | spend: none
 acceptance: `python -m pytest tests/runner -m toolchain -q` — verify_claim confirms the true primitive and refutes each wrong primitive for all 7 programs; bad binary path -> inconclusive (never refuted); no-network wrapper blocks a network call
 notes: fallback if sandbox-exec misbehaves: run without it and record the limitation in DECISIONS.md
 ## P-03 Ledger, constant extraction, mediator tools (~30 min)
-status: todo | depends: P-01 | owner: agent | spend: none
+status: done | depends: P-01 | owner: agent | spend: none
 acceptance: `python -m pytest tests/ledger tests/mediator -m toolchain -q` — disasm facts of crc32_clean include 0xEDB88320; crc32_obfpoly does NOT; fnv1a_crcdecoy includes it; djb2_fnvdecoy includes 5381 and the FNV constants; agent-facing API has no write path; unknown handle rejected
 notes: this is the riskiest task (mov/movk reconstruction); if constants fail after 20 min, fall back to radare2 `pdf` text for disassembly while keeping extract_constants
 ## P-04 Claims and T2 contract checker (~15 min)
