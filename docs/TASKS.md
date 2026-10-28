@@ -19,7 +19,7 @@ status: done | depends: P-01 | owner: agent | spend: none
 acceptance: `python -m pytest tests/ledger tests/mediator -m toolchain -q` — disasm facts of crc32_clean include 0xEDB88320; crc32_obfpoly does NOT; fnv1a_crcdecoy includes it; djb2_fnvdecoy includes 5381 and the FNV constants; agent-facing API has no write path; unknown handle rejected
 notes: this is the riskiest task (mov/movk reconstruction); if constants fail after 20 min, fall back to radare2 `pdf` text for disassembly while keeping extract_constants
 ## P-04 Claims and T2 contract checker (~15 min)
-status: todo | depends: P-03 | owner: agent | spend: none
+status: done | depends: P-03 | owner: agent | spend: none
 acceptance: `python -m pytest tests/claims tests/contracts -q` — hand-built ledger/claim cases for rules (a) and (b) and all four reason codes, incl. the decoy cases
 ## P-05 Status controller and registry-only report (~10 min)
 status: todo | depends: P-02, P-04 | owner: agent | spend: none
