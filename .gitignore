@@ -1,0 +1,15 @@
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+*.egg-info/
+# generated artifacts
+corpus/bin/
+corpus/build/
+runs/*
+!runs/.gitkeep
+# secrets
+.env
+*.key

@@ -1,0 +1,6 @@
+{
+ "program": "fnv1a_crcdecoy",
+ "function_symbol": "target",
+ "primitive": "fnv1a32",
+ "variant": "decoy"
+}

@@ -1,0 +1,51 @@
+[
+ {
+  "name": "crc32_clean",
+  "source": "corpus/src/crc32_clean.c",
+  "truth_primitive": "crc32",
+  "variant": "clean",
+  "note": "Table-free bitwise CRC-32; polynomial constant visible."
+ },
+ {
+  "name": "fnv1a_clean",
+  "source": "corpus/src/fnv1a_clean.c",
+  "truth_primitive": "fnv1a32",
+  "variant": "clean",
+  "note": "FNV-1a 32-bit; offset basis and prime visible."
+ },
+ {
+  "name": "adler32_clean",
+  "source": "corpus/src/adler32_clean.c",
+  "truth_primitive": "adler32",
+  "variant": "clean",
+  "note": "Adler-32; modulus 65521 visible."
+ },
+ {
+  "name": "djb2_clean",
+  "source": "corpus/src/djb2_clean.c",
+  "truth_primitive": "djb2",
+  "variant": "clean",
+  "note": "djb2; seed 5381 visible."
+ },
+ {
+  "name": "fnv1a_crcdecoy",
+  "source": "corpus/src/fnv1a_crcdecoy.c",
+  "truth_primitive": "fnv1a32",
+  "variant": "decoy",
+  "note": "FNV-1a whose dead branch contains the CRC-32 polynomial (misleading evidence)."
+ },
+ {
+  "name": "crc32_obfpoly",
+  "source": "corpus/src/crc32_obfpoly.c",
+  "truth_primitive": "crc32",
+  "variant": "obfuscated",
+  "note": "CRC-32 with runtime-computed polynomial; the constant never appears literally."
+ },
+ {
+  "name": "djb2_fnvdecoy",
+  "source": "corpus/src/djb2_fnvdecoy.c",
+  "truth_primitive": "djb2",
+  "variant": "decoy",
+  "note": "djb2 whose dead branch contains FNV-1a constants (misleading evidence)."
+ }
+]

@@ -1,0 +1,6 @@
+{
+ "program": "djb2_clean",
+ "function_symbol": "target",
+ "primitive": "djb2",
+ "variant": "clean"
+}

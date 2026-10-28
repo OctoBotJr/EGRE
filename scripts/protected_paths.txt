@@ -1,0 +1,24 @@
+# One path or directory prefix per line. Loop commits that touch these fail (override: ALLOW_PROTECTED=1, human only).
+AGENTS.md
+pyproject.toml
+docs/PROJECT_SPEC.md
+docs/ARCHITECTURE.md
+docs/CLAIM_TAXONOMY.md
+docs/EVALUATION_PLAN.md
+docs/RESEARCH_NOTES.md
+docs/GUARDRAILS.md
+docs/LOOP.md
+docs/SETUP.md
+docs/playbooks/
+eval/frozen/
+scripts/protected_paths.txt
+scripts/check_protected.sh
+scripts/verify.sh
+scripts/loop.sh
+Brewfile
+scripts/setup_ghidra.sh
+docs/PROTOTYPE.md
+corpus/src/
+corpus/truth/
+corpus/catalog.json
+corpus/reference_vectors.json

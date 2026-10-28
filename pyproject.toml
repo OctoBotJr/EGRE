@@ -1,0 +1,57 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "egre"
+version = "0.1.0"
+description = "Evidence-grounded reverse engineering: claim-level auditing and gating for LLM RE agents"
+requires-python = ">=3.11"
+dependencies = [
+  "pydantic>=2.6",
+  "pyyaml>=6.0",
+]
+
+[project.optional-dependencies]
+# Binary-analysis stack (native macOS arm64)
+re = [
+  "capstone>=5.0",
+  "unicorn>=2.0",
+  "r2pipe>=1.8",
+  "lief>=0.15",
+]
+# Optional and experimental on Mach-O (CLE's Mach-O backend has limited support)
+symbolic = [
+  "angr>=9.2",
+]
+# LLM SDKs (only needed for tasks marked `spend: approved`)
+llm = [
+  "anthropic>=0.40",
+  "openai>=1.50",
+]
+dev = [
+  "pytest>=8.0",
+  "pytest-cov>=5.0",
+  "hypothesis>=6.100",
+  "ruff>=0.5",
+  "mypy>=1.10",
+  "types-PyYAML",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+  "toolchain: needs Ghidra/radare2/Unicorn/clang (native macOS); run via ./scripts/verify.sh --full",
+]
+addopts = "-q"
+
+[tool.ruff]
+line-length = 100
+src = ["src", "tests"]
+
+[tool.mypy]
+python_version = "3.11"
+ignore_missing_imports = true

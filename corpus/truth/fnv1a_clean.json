@@ -1,0 +1,6 @@
+{
+ "program": "fnv1a_clean",
+ "function_symbol": "target",
+ "primitive": "fnv1a32",
+ "variant": "clean"
+}
