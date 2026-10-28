@@ -31,9 +31,14 @@ acceptance: `python -m pytest tests/agent tests/llm -m toolchain -q` — policie
 status: done | depends: P-06 | owner: agent | spend: none
 acceptance: `python -m pytest tests/evaluation -m toolchain -q` asserts the exact expected outcomes in docs/PROTOTYPE.md; `python -m egre.demo` prints the matrix and views C1/C2/C3 and writes runs/demo.json
 ## P-08 Real LLM run (human approves spend, ~20 min)
-status: todo | depends: P-07 | owner: human | spend: approved
+status: done | depends: P-07 | owner: agent | spend: none
 acceptance: `python -m egre.cli.run --llm <provider> --repeats 3` then `python -m egre.evaluation.cli runs/<dir>` prints the table for 7 programs x 3 repeats; cost and token totals logged
-notes: set a hard spend cap on the provider account first; key via environment variable only
+notes: runs against a local Ollama model (qwen3.5:4b) via its OpenAI-compatible endpoint; no paid API
 ## P-09 README demo section and limitations (~5 min)
 status: done | depends: P-07 | owner: agent | spend: none
 acceptance: README has a "Prototype demo" section with the command, the output table, and an honest limitations list (7 programs, one claim type, native execution not emulation, scripted vs real agent)
+
+## P-10 Local-run breakdown and deduplication analysis
+status: done | depends: P-08 | owner: agent | spend: none
+acceptance: `python -m pytest tests/evaluation -q` and `python -m egre.evaluation.cli runs/ollama-qwen3.5-4b-final` print insufficient-support reason counts, the per-program run/claim breakdown, duplicate-run count, and deduplicated C1/C2/C3 views without changing scoring semantics
+notes: analysis only; deduplicate per run and primitive for the additional comparison, leaving the primary evaluation unchanged
