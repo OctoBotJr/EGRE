@@ -1,0 +1,14 @@
+{
+  "program": "fnv1a_crcdecoy",
+  "binary": "corpus/bin/fnv1a_crcdecoy",
+  "function_addr": 4294968416,
+  "function_size": 168,
+  "signature": "u32 f(const u8*,size_t)",
+  "primitives": [
+    "crc32",
+    "fnv1a32",
+    "adler32",
+    "djb2",
+    "other"
+  ]
+}

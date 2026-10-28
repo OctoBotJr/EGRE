@@ -1,0 +1,14 @@
+{
+  "program": "djb2_fnvdecoy",
+  "binary": "corpus/bin/djb2_fnvdecoy",
+  "function_addr": 4294968416,
+  "function_size": 172,
+  "signature": "u32 f(const u8*,size_t)",
+  "primitives": [
+    "crc32",
+    "fnv1a32",
+    "adler32",
+    "djb2",
+    "other"
+  ]
+}

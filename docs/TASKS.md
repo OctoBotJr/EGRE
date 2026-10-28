@@ -8,7 +8,7 @@ status: done | depends: - | owner: human | spend: none
 acceptance: `source .venv/bin/activate && ./scripts/verify.sh` passes; `./scripts/check_env.sh` has no MISSING for clang/strip/codesign/otool/sandbox-exec/radare2(optional)/python libs; `./scripts/smoke_env.sh` prints SMOKE PASSED
 notes: Ghidra is NOT needed (warn only). Skip setup_ghidra.sh.
 ## P-01 Corpus build (~20 min)
-status: todo | depends: P-00 | owner: agent | spend: none
+status: done | depends: P-00 | owner: agent | spend: none
 acceptance: `python -m egre.corpus.build && python -m pytest tests/corpus -m toolchain -q` — 7 stripped, signed arm64 Mach-O binaries; each binary's native output equals corpus/reference_vectors.json for its truth primitive on every input; task JSONs contain no truth fields
 ## P-02 References, executor, runner verdicts (~25 min)
 status: todo | depends: P-01 | owner: agent | spend: none
