@@ -18,3 +18,8 @@ D-013 | accepted | Reproducibility on a host machine via Brewfile + recorded ver
 D-014 | accepted | Prototype executes programs natively under sandbox-exec (function-level evidence via a one-function wrapper) instead of Unicorn; Unicorn is a later swap behind the Executor interface.
 D-015 | accepted | Prototype claim type is T2 only, with a closed primitive set and a `target` function whose address is given in the task file.
 D-016 | accepted | Ghidra is optional and skipped for the prototype.
+
+D-017 | 2026-10-28 | status: proposed | Direct executor fallback under a non-nestable outer seatbelt
+Context: P-02 requires `sandbox-exec` with `(deny network*)`, but the Codex execution seatbelt rejects every nested `sandbox-exec` profile with status 71 and `sandbox_apply: Operation not permitted`. The task explicitly permits running without `sandbox-exec` when it misbehaves, provided the limitation is recorded.
+Decision: attempt the required no-network profile first; retry the program directly only for that exact status/message pair. Treat every other sandbox, process, timeout, or output failure as `ExecError`. The Codex outer seatbelt remains the network boundary during this fallback.
+Consequences: P-02 can execute its benign corpus within Codex and still uses the required wrapper on an ordinary native host. In an environment that rejects nested profiles but does not independently deny network, the fallback does not provide the prototype's intended network isolation; such an environment must not run untrusted programs and should reject this proposal or supply another wrapper.

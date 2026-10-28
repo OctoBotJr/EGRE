@@ -11,7 +11,7 @@ notes: Ghidra is NOT needed (warn only). Skip setup_ghidra.sh.
 status: done | depends: P-00 | owner: agent | spend: none
 acceptance: `python -m egre.corpus.build && python -m pytest tests/corpus -m toolchain -q` — 7 stripped, signed arm64 Mach-O binaries; each binary's native output equals corpus/reference_vectors.json for its truth primitive on every input; task JSONs contain no truth fields
 ## P-02 References, executor, runner verdicts (~25 min)
-status: todo | depends: P-01 | owner: agent | spend: none
+status: done | depends: P-01 | owner: agent | spend: none
 acceptance: `python -m pytest tests/runner -m toolchain -q` — verify_claim confirms the true primitive and refutes each wrong primitive for all 7 programs; bad binary path -> inconclusive (never refuted); no-network wrapper blocks a network call
 notes: fallback if sandbox-exec misbehaves: run without it and record the limitation in DECISIONS.md
 ## P-03 Ledger, constant extraction, mediator tools (~30 min)
