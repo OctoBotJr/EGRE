@@ -35,5 +35,5 @@ status: todo | depends: P-07 | owner: human | spend: approved
 acceptance: `python -m egre.cli.run --llm <provider> --repeats 3` then `python -m egre.evaluation.cli runs/<dir>` prints the table for 7 programs x 3 repeats; cost and token totals logged
 notes: set a hard spend cap on the provider account first; key via environment variable only
 ## P-09 README demo section and limitations (~5 min)
-status: todo | depends: P-07 | owner: agent | spend: none
+status: done | depends: P-07 | owner: agent | spend: none
 acceptance: README has a "Prototype demo" section with the command, the output table, and an honest limitations list (7 programs, one claim type, native execution not emulation, scripted vs real agent)

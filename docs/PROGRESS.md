@@ -111,3 +111,16 @@ Entry format:
 - review: no test was deleted, skipped, loosened, or made circular; exact policy outcomes and counts are fixed independently of implementation output (`tests/evaluation/test_metrics.py:11`, `tests/evaluation/test_metrics.py:71`). Truth is joined only in the offline evaluator after support and experiment verdicts are independently derived (`src/egre/evaluation/metrics.py:98`, `src/egre/evaluation/metrics.py:111`), and no LLM output decides support, verdict, status, or truth. Existing fail-closed runner and ledger behavior are reused unchanged; runtime packages import no corpus/evaluation code. Changes are limited to P-07, add no dependency or novelty claim, and `git diff --check` plus `./scripts/check_protected.sh` passed.
 - notes / surprises / follow-ups: the intentional red run failed because P-07 modules did not exist. Acceptance then passed; the first verifier attempt found only exception-type lint, which was corrected before the final acceptance/demo/verifier sequence passed. C1/C2/C3 precision is claim-level, while coverage is the fraction of the 21 policy/program opportunities retaining a true claim. P-08 is now the first eligible task and requires the human spend gate.
 - stop signal: `STOP_HUMAN`.
+
+## 2026-10-28 iter 9 — P-09 — plan
+- plan: document the completed scripted prototype demo, its verified gate table, and its limitations; state explicitly that the optional paid P-08 real-LLM run was deferred by the user.
+- files to touch: `README.md`, then `docs/TASKS.md`, `docs/STATUS.md`, and this append-only log after verification.
+- test-first outline: inspect the generated `runs/demo.json` values used in the README, run `python -m egre.demo`, then run `./scripts/verify.sh --full`; review the diff for claims beyond the tested prototype scope.
+
+## 2026-10-28 iter 9 — P-09 — done
+- changed: added the `Prototype demo` section to `README.md` with the no-key command, the generated support/truth and C1/C2/C3 tables, explanations of the gate views, and an explicit limitations list; recorded that optional P-08 was deferred and updated only P-09 and loop state.
+- acceptance: README contains `python -m egre.demo`, the verified 14/3/1/4 support x truth matrix, exact C1/C2/C3 output, and all required limitations (seven programs, one claim type, native execution rather than emulation, scripted rather than real agents); `python -m egre.demo` regenerated valid `runs/demo.json`.
+- verify: `./scripts/verify.sh --full` -> pass (ruff clean, mypy clean across 32 source files, 113 tests passed).
+- review: output values match the generated demo; wording is limited to this corpus and does not claim general effectiveness or a real-LLM result. No code, test, dependency, protected file, verdict logic, ledger path, or runtime boundary changed; `git diff --check` and `./scripts/check_protected.sh` passed.
+- notes / surprises / follow-ups: P-08 remains `todo` but was explicitly deferred by the user; the complete no-spend scripted prototype is documented and reproducible.
+- stop signal: `STOP_HUMAN` because the only remaining prototype task is the deferred human-owned P-08 real-LLM run.
