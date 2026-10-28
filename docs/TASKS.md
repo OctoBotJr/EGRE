@@ -22,7 +22,7 @@ notes: this is the riskiest task (mov/movk reconstruction); if constants fail af
 status: done | depends: P-03 | owner: agent | spend: none
 acceptance: `python -m pytest tests/claims tests/contracts -q` — hand-built ledger/claim cases for rules (a) and (b) and all four reason codes, incl. the decoy cases
 ## P-05 Status controller and registry-only report (~10 min)
-status: todo | depends: P-02, P-04 | owner: agent | spend: none
+status: done | depends: P-02, P-04 | owner: agent | spend: none
 acceptance: `python -m pytest tests/controller tests/report -q` — full (support x verdict) table; report claims == registry claims (test); support_gap flag set when verified but insufficient
 ## P-06 Agent loop, fake LLM, scripted policies, one real provider adapter (~25 min)
 status: todo | depends: P-05 | owner: agent | spend: none
