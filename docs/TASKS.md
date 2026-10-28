@@ -28,7 +28,7 @@ acceptance: `python -m pytest tests/controller tests/report -q` — full (suppor
 status: done | depends: P-05 | owner: agent | spend: none
 acceptance: `python -m pytest tests/agent tests/llm -m toolchain -q` — policies P1-P3 run on all 7 programs through the real mediator/ledger; no network in tests; real adapter is import-safe without a key
 ## P-07 Evaluation table and demo (~15 min)
-status: todo | depends: P-06 | owner: agent | spend: none
+status: done | depends: P-06 | owner: agent | spend: none
 acceptance: `python -m pytest tests/evaluation -m toolchain -q` asserts the exact expected outcomes in docs/PROTOTYPE.md; `python -m egre.demo` prints the matrix and views C1/C2/C3 and writes runs/demo.json
 ## P-08 Real LLM run (human approves spend, ~20 min)
 status: todo | depends: P-07 | owner: human | spend: approved
