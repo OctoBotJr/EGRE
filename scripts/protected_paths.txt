@@ -18,6 +18,7 @@ scripts/loop.sh
 Brewfile
 scripts/setup_ghidra.sh
 docs/PROTOTYPE.md
+docs/V2_SPEC.md
 corpus/src/
 corpus/truth/
 corpus/catalog.json
