@@ -29,7 +29,7 @@ status: done | depends: V-04 | owner: agent | spend: none
 acceptance: hand-built ledger fixtures covering every tier (contradicted/none/contested/structural/behavioral), the shared-constant case, and the contradiction case; S0 reproduces v1 results on existing runs exactly; tests in tests/support or equivalent
 
 ## V-06 Status, flags, reason codes v2; per-claim evidence subgraph in report
-status: todo | depends: V-05 | owner: agent | spend: none
+status: done | depends: V-05 | owner: agent | spend: none
 acceptance: status/flags per V2_SPEC.md section 3.6; reason codes per section 3.8; report stays registry-only (test); flags (support_gap, citation_gap, self_contradicted, post_hoc) covered by tests; report includes a Mermaid evidence subgraph per claim
 
 ## V-07 Re-score R0 and scripted runs under S0/S1

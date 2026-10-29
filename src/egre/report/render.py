@@ -5,8 +5,12 @@ from __future__ import annotations
 import json
 from collections.abc import Mapping
 
+import networkx as nx
+
 from egre.claims.schema import Claim, Registry
 from egre.controller.status import ClaimStatus
+from egre.controller.status_v2 import ClaimFlags, StatusValueV2
+from egre.report.subgraph import claim_subgraph_mermaid
 
 
 def _report_entries(
@@ -56,4 +60,50 @@ def render_markdown(registry: Registry, statuses: Mapping[str, ClaimStatus]) -> 
             f"{claim.confidence:.3f} | {handles} | {status.status} | "
             f"{'yes' if status.support_gap else 'no'} |"
         )
+    return "\n".join(lines) + "\n"
+
+
+def _report_entries_v2(
+    registry: Registry, annotations: Mapping[str, tuple[StatusValueV2, ClaimFlags]]
+) -> tuple[tuple[Claim, StatusValueV2, ClaimFlags], ...]:
+    claims = registry.claims
+    registry_ids = {claim.id for claim in claims}
+    if set(annotations) != registry_ids:
+        raise ValueError("status ids must exactly match registry ids")
+    return tuple((claim, *annotations[claim.id]) for claim in claims)
+
+
+def render_markdown_v2(
+    registry: Registry,
+    annotations: Mapping[str, tuple[StatusValueV2, ClaimFlags]],
+    graph: nx.DiGraph,
+) -> str:
+    """Render the v2 claim table plus one Mermaid evidence subgraph per claim."""
+    entries = _report_entries_v2(registry, annotations)
+    lines = [
+        "# Claim report (v2)",
+        "",
+        (
+            "| ID | Function | Primitive | Status | support_gap | citation_gap | "
+            "self_contradicted | post_hoc |"
+        ),
+        "| --- | ---: | --- | --- | --- | --- | --- | --- |",
+    ]
+    for claim, status, flags in entries:
+        lines.append(
+            "| "
+            f"{_markdown_text(claim.id)} | {claim.function_addr:#x} | {claim.primitive} | "
+            f"{status} | {'yes' if flags.support_gap else 'no'} | "
+            f"{'yes' if flags.citation_gap else 'no'} | "
+            f"{'yes' if flags.self_contradicted else 'no'} | "
+            f"{'yes' if flags.post_hoc else 'no'} |"
+        )
+    lines.append("")
+    for claim, _status, _flags in entries:
+        lines.append(f"## Evidence for {_markdown_text(claim.id)}")
+        lines.append("")
+        lines.append("```mermaid")
+        lines.append(claim_subgraph_mermaid(claim, graph).rstrip("\n"))
+        lines.append("```")
+        lines.append("")
     return "\n".join(lines) + "\n"

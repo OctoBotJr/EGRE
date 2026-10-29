@@ -1,11 +1,13 @@
 import json
 from collections.abc import Callable, Mapping
 
+import networkx as nx
 import pytest
 
 from egre.claims.schema import Claim, Registry
 from egre.controller.status import ClaimStatus
-from egre.report.render import render_json, render_markdown
+from egre.controller.status_v2 import ClaimFlags
+from egre.report.render import render_json, render_markdown, render_markdown_v2
 
 
 def _claim(claim_id: str, primitive: str, confidence: float) -> Claim:
@@ -78,3 +80,37 @@ def test_report_rejects_status_sets_that_do_not_exactly_match_registry(
 
     with pytest.raises(ValueError, match="status ids must exactly match registry ids"):
         renderer(registry, statuses)
+
+
+def test_markdown_v2_report_has_one_table_row_and_one_mermaid_block_per_claim() -> None:
+    registry = Registry(
+        [
+            _claim("first", "crc32", 0.9),
+            _claim("second", "djb2", 0.4),
+        ]
+    )
+    annotations = {
+        "first": ("verified", ClaimFlags(False, False, False, False)),
+        "second": (
+            "unverified",
+            ClaimFlags(support_gap=True, citation_gap=True, self_contradicted=False, post_hoc=True),
+        ),
+    }
+    graph: nx.DiGraph = nx.DiGraph()
+
+    markdown = render_markdown_v2(registry, annotations, graph)
+
+    assert markdown.index("first") < markdown.index("second")
+    assert markdown.count("```mermaid") == 2
+    assert "| verified | no | no | no | no |" in markdown
+    assert "| unverified | yes | yes | no | yes |" in markdown
+    assert '  claim_first["first: crc32"]' in markdown
+    assert '  claim_second["second: djb2"]' in markdown
+
+
+def test_markdown_v2_report_rejects_annotation_sets_that_do_not_exactly_match_registry() -> None:
+    registry = Registry([_claim("c1", "crc32", 0.8)])
+    graph: nx.DiGraph = nx.DiGraph()
+
+    with pytest.raises(ValueError, match="status ids must exactly match registry ids"):
+        render_markdown_v2(registry, {}, graph)
