@@ -17,7 +17,7 @@ acceptance: run files log messages sent, raw response, and parsed action per ste
 ## Phase B — graph and support engine (no tracer)
 
 ## V-03 CFG builder with Capstone
-status: todo | depends: V-02 | owner: agent | spend: none
+status: done | depends: V-02 | owner: agent | spend: none
 acceptance: leaders = entry, branch targets, instruction after branch/ret; every corpus binary yields blocks covering [addr, addr+size) for the target function; decoy dead-branch block exists as its own block; tests on all v1 binaries
 
 ## V-04 Evidence graph builder
