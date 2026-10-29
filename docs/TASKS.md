@@ -39,7 +39,7 @@ acceptance: evaluation CLI produces S0/S1 tables for existing runs; scripted-pol
 ## Phase C — execution qualification
 
 ## V-08 Unicorn tracer for the target function
-status: todo | depends: V-03 | owner: agent | spend: none
+status: done | depends: V-03 | owner: agent | spend: none
 acceptance: maps Mach-O segments via lief, sets up stack, places input buffer in x0/x1, uses an LR sentinel for return, hooks blocks, enables FP/SIMD via CPACR_EL1, bounds instructions by budget; tracer output equals native output on all reference vectors for all v1 binaries at -O0; dead-branch blocks never show as covered
 notes: fallback if Unicorn mapping fails or is slow — ship S1 first (already done by V-07), mark constants UNQUALIFIED, record the limitation and keep going
 
