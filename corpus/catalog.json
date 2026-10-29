@@ -47,5 +47,121 @@
   "truth_primitive": "djb2",
   "variant": "decoy",
   "note": "djb2 whose dead branch contains FNV-1a constants (misleading evidence)."
+ },
+ {
+  "name": "fnv1_clean",
+  "source": "corpus/src/fnv1_clean.c",
+  "truth_primitive": "fnv1_32",
+  "variant": "clean",
+  "note": "FNV-1 (non-xor-swapped); shares both constants with FNV-1a but multiplies before xor-ing the byte in."
+ },
+ {
+  "name": "jamcrc_clean",
+  "source": "corpus/src/jamcrc_clean.c",
+  "truth_primitive": "jamcrc",
+  "variant": "clean",
+  "note": "Same polynomial and init as CRC-32, no final inversion."
+ },
+ {
+  "name": "crc32c_clean",
+  "source": "corpus/src/crc32c_clean.c",
+  "truth_primitive": "crc32c",
+  "variant": "clean",
+  "note": "Same structure as CRC-32, Castagnoli polynomial 0x82F63B78."
+ },
+ {
+  "name": "sdbm_execdecoy",
+  "source": "corpus/src/sdbm_execdecoy.c",
+  "truth_primitive": "sdbm",
+  "variant": "decoy",
+  "note": "No distinctive constant itself, plus an executed CRC-32 constant that never affects the result (tests H4b)."
+ },
+ {
+  "name": "crc32_clean_O2",
+  "source": "corpus/src/crc32_clean.c",
+  "truth_primitive": "crc32",
+  "variant": "clean",
+  "opt": "O2",
+  "note": "-O2 build of crc32_clean, same source."
+ },
+ {
+  "name": "fnv1a_clean_O2",
+  "source": "corpus/src/fnv1a_clean.c",
+  "truth_primitive": "fnv1a32",
+  "variant": "clean",
+  "opt": "O2",
+  "note": "-O2 build of fnv1a_clean, same source."
+ },
+ {
+  "name": "adler32_clean_O2",
+  "source": "corpus/src/adler32_clean.c",
+  "truth_primitive": "adler32",
+  "variant": "clean",
+  "opt": "O2",
+  "note": "-O2 build of adler32_clean, same source."
+ },
+ {
+  "name": "djb2_clean_O2",
+  "source": "corpus/src/djb2_clean.c",
+  "truth_primitive": "djb2",
+  "variant": "clean",
+  "opt": "O2",
+  "note": "-O2 build of djb2_clean, same source."
+ },
+ {
+  "name": "fnv1a_crcdecoy_O2",
+  "source": "corpus/src/fnv1a_crcdecoy.c",
+  "truth_primitive": "fnv1a32",
+  "variant": "decoy",
+  "opt": "O2",
+  "note": "-O2 build of fnv1a_crcdecoy, same source."
+ },
+ {
+  "name": "crc32_obfpoly_O2",
+  "source": "corpus/src/crc32_obfpoly.c",
+  "truth_primitive": "crc32",
+  "variant": "obfuscated",
+  "opt": "O2",
+  "note": "-O2 build of crc32_obfpoly, same source."
+ },
+ {
+  "name": "djb2_fnvdecoy_O2",
+  "source": "corpus/src/djb2_fnvdecoy.c",
+  "truth_primitive": "djb2",
+  "variant": "decoy",
+  "opt": "O2",
+  "note": "-O2 build of djb2_fnvdecoy, same source."
+ },
+ {
+  "name": "fnv1_clean_O2",
+  "source": "corpus/src/fnv1_clean.c",
+  "truth_primitive": "fnv1_32",
+  "variant": "clean",
+  "opt": "O2",
+  "note": "-O2 build of fnv1_clean, same source."
+ },
+ {
+  "name": "jamcrc_clean_O2",
+  "source": "corpus/src/jamcrc_clean.c",
+  "truth_primitive": "jamcrc",
+  "variant": "clean",
+  "opt": "O2",
+  "note": "-O2 build of jamcrc_clean, same source."
+ },
+ {
+  "name": "crc32c_clean_O2",
+  "source": "corpus/src/crc32c_clean.c",
+  "truth_primitive": "crc32c",
+  "variant": "clean",
+  "opt": "O2",
+  "note": "-O2 build of crc32c_clean, same source."
+ },
+ {
+  "name": "sdbm_execdecoy_O2",
+  "source": "corpus/src/sdbm_execdecoy.c",
+  "truth_primitive": "sdbm",
+  "variant": "decoy",
+  "opt": "O2",
+  "note": "-O2 build of sdbm_execdecoy, same source. Check at -O2 whether the compiler keeps `tag` live (volatile should force it) and whether the CFG shape V-03 relies on still holds."
  }
 ]

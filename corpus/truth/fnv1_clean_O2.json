@@ -1,0 +1,6 @@
+{
+ "program": "fnv1_clean_O2",
+ "function_symbol": "target",
+ "primitive": "fnv1_32",
+ "variant": "clean"
+}

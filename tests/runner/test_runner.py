@@ -33,9 +33,23 @@ def test_references_match_independent_vectors() -> None:
         ]
 
 
-@pytest.mark.parametrize(
-    "truth_path", sorted((ROOT / "corpus" / "truth").glob("*.json")), ids=lambda path: path.stem
-)
+def _closed_world_truth_paths() -> list[Path]:
+    return [
+        path
+        for path in sorted((ROOT / "corpus" / "truth").glob("*.json"))
+        if _load_json(path)["primitive"] in PRIMITIVES
+    ]
+
+
+def _open_world_truth_paths() -> list[Path]:
+    return [
+        path
+        for path in sorted((ROOT / "corpus" / "truth").glob("*.json"))
+        if _load_json(path)["primitive"] not in PRIMITIVES
+    ]
+
+
+@pytest.mark.parametrize("truth_path", _closed_world_truth_paths(), ids=lambda path: path.stem)
 def test_verify_claim_confirms_truth_and_refutes_wrong_primitives(truth_path: Path) -> None:
     truth = _load_json(truth_path)
     program = truth["program"]
@@ -52,6 +66,25 @@ def test_verify_claim_confirms_truth_and_refutes_wrong_primitives(truth_path: Pa
         refuted = verify_claim(binary, wrong_primitive)
         assert refuted.verdict == "refuted"
         assert any(item.actual != item.expected for item in refuted.evidence)
+
+
+@pytest.mark.parametrize("truth_path", _open_world_truth_paths(), ids=lambda path: path.stem)
+def test_verify_claim_is_inconclusive_for_primitives_outside_the_closed_world(
+    truth_path: Path,
+) -> None:
+    """V2 corpus additions (jamcrc/crc32c/fnv1_32/sdbm) have no closed-world
+    reference yet -- that is V-16's open-world mode, not V-10's job. verify_claim
+    must say so plainly, never fabricate a verdict for a primitive it can't check."""
+    truth = _load_json(truth_path)
+    program = truth["program"]
+    true_primitive = truth["primitive"]
+    assert isinstance(program, str)
+    assert isinstance(true_primitive, str)
+
+    verdict = verify_claim(ROOT / "corpus" / "bin" / program, true_primitive)
+
+    assert verdict.verdict == "inconclusive"
+    assert verdict.evidence[0].error == f"unknown primitive: {true_primitive}"
 
 
 def test_bad_binary_is_inconclusive() -> None:

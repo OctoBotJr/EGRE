@@ -1,0 +1,6 @@
+{
+ "program": "crc32_obfpoly_O2",
+ "function_symbol": "target",
+ "primitive": "crc32",
+ "variant": "obfuscated"
+}

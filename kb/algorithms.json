@@ -1,0 +1,281 @@
+[
+ {
+  "id": "crc32",
+  "family": "crc",
+  "aliases": [
+   "crc-32",
+   "crc32b",
+   "cksum32"
+  ],
+  "description": "Bitwise CRC-32 (reflected), polynomial 0xEDB88320, init 0xFFFFFFFF, final XOR 0xFFFFFFFF.",
+  "parameters": {
+   "poly": "0xEDB88320",
+   "init": "0xFFFFFFFF",
+   "xorout": "0xFFFFFFFF",
+   "reflected": true
+  },
+  "signature_constants": [
+   {
+    "value": "0xEDB88320",
+    "role": "polynomial"
+   }
+  ],
+  "public_vectors": [
+   {
+    "input_hex": "313233343536373839",
+    "output_hex": "cbf43926"
+   }
+  ],
+  "validated": true,
+  "validation_note": "Matches zlib.crc32 and the published check value for '123456789' (already verified in v1)."
+ },
+ {
+  "id": "jamcrc",
+  "family": "crc",
+  "aliases": [
+   "jam-crc"
+  ],
+  "description": "Same polynomial/init as CRC-32, no final inversion.",
+  "parameters": {
+   "poly": "0xEDB88320",
+   "init": "0xFFFFFFFF",
+   "xorout": "0x00000000",
+   "reflected": true
+  },
+  "signature_constants": [
+   {
+    "value": "0xEDB88320",
+    "role": "polynomial"
+   }
+  ],
+  "public_vectors": [
+   {
+    "input_hex": "313233343536373839",
+    "output_hex": "340bc6d9"
+   }
+  ],
+  "validated": true,
+  "validation_note": "Matches the published check value for '123456789' given in V2_SPEC.md section 5.2; also equals 0xFFFFFFFF ^ crc32('123456789')."
+ },
+ {
+  "id": "crc32c",
+  "family": "crc",
+  "aliases": [
+   "crc-32c",
+   "castagnoli"
+  ],
+  "description": "CRC-32 with the Castagnoli polynomial 0x82F63B78 instead of 0xEDB88320.",
+  "parameters": {
+   "poly": "0x82F63B78",
+   "init": "0xFFFFFFFF",
+   "xorout": "0xFFFFFFFF",
+   "reflected": true
+  },
+  "signature_constants": [
+   {
+    "value": "0x82F63B78",
+    "role": "polynomial"
+   }
+  ],
+  "public_vectors": [
+   {
+    "input_hex": "313233343536373839",
+    "output_hex": "e3069283"
+   }
+  ],
+  "validated": true,
+  "validation_note": "Matches the published check value for '123456789' given in V2_SPEC.md section 5.2."
+ },
+ {
+  "id": "adler32",
+  "family": "checksum",
+  "aliases": [
+   "adler-32"
+  ],
+  "description": "Two 16-bit sums mod 65521, combined as (s2<<16)|s1.",
+  "parameters": {
+   "modulus": "65521"
+  },
+  "signature_constants": [
+   {
+    "value": "65521",
+    "role": "modulus"
+   }
+  ],
+  "public_vectors": [
+   {
+    "input_hex": "57696b697065646961",
+    "output_hex": "11e60398"
+   }
+  ],
+  "validated": true,
+  "validation_note": "Matches zlib.adler32 and the published check value for 'Wikipedia' (already verified in v1)."
+ },
+ {
+  "id": "fletcher32",
+  "family": "checksum",
+  "aliases": [
+   "fletcher-32"
+  ],
+  "description": "16-bit-word running sums mod 0xFFFF, combined as (s2<<16)|s1; odd-length input zero-padded.",
+  "parameters": {
+   "modulus": "0xFFFF",
+   "word_size": 16
+  },
+  "signature_constants": [],
+  "public_vectors": [
+   {
+    "input_hex": "6162636465",
+    "output_hex": "f04fc729"
+   },
+   {
+    "input_hex": "6162636465666768",
+    "output_hex": "ebe19591"
+   }
+  ],
+  "validated": true,
+  "validation_note": "Matches the published Fletcher-32 check values for 'abcde' (0xF04FC729) and 'abcdefgh' (0xEBE19591) from Wikipedia's Fletcher's checksum article, found and cross-checked 2026-10-29."
+ },
+ {
+  "id": "fnv1a32",
+  "family": "fnv",
+  "aliases": [
+   "fnv-1a",
+   "fnv1a"
+  ],
+  "description": "FNV-1a 32-bit: xor byte in, then multiply by the FNV prime.",
+  "parameters": {
+   "offset_basis": "0x811C9DC5",
+   "prime": "0x01000193"
+  },
+  "signature_constants": [
+   {
+    "value": "0x811C9DC5",
+    "role": "offset_basis"
+   },
+   {
+    "value": "0x01000193",
+    "role": "prime"
+   }
+  ],
+  "public_vectors": [
+   {
+    "input_hex": "61",
+    "output_hex": "e40c292c"
+   }
+  ],
+  "validated": true,
+  "validation_note": "Matches the published FNV-1a32('a') check value (already verified in v1)."
+ },
+ {
+  "id": "fnv1_32",
+  "family": "fnv",
+  "aliases": [
+   "fnv-1",
+   "fnv1"
+  ],
+  "description": "FNV-1 32-bit: multiply by the FNV prime first, then xor the byte in (opposite order from FNV-1a). Shares both constants with FNV-1a.",
+  "parameters": {
+   "offset_basis": "0x811C9DC5",
+   "prime": "0x01000193"
+  },
+  "signature_constants": [
+   {
+    "value": "0x811C9DC5",
+    "role": "offset_basis"
+   },
+   {
+    "value": "0x01000193",
+    "role": "prime"
+   }
+  ],
+  "public_vectors": [
+   {
+    "input_hex": "61",
+    "output_hex": "050c5d7e"
+   }
+  ],
+  "validated": true,
+  "validation_note": "Matches the published FNV-1_32('a') check value given in V2_SPEC.md section 5.2."
+ },
+ {
+  "id": "djb2",
+  "family": "djb",
+  "aliases": [
+   "djb2",
+   "bernstein"
+  ],
+  "description": "h = 5381; h = h*33 + byte.",
+  "parameters": {
+   "seed": "5381",
+   "multiplier": "33"
+  },
+  "signature_constants": [
+   {
+    "value": "5381",
+    "role": "seed"
+   }
+  ],
+  "public_vectors": [
+   {
+    "input_hex": "",
+    "output_hex": "00001505"
+   }
+  ],
+  "validated": true,
+  "validation_note": "Already validated in v1 against an independent Python implementation on 7 inputs."
+ },
+ {
+  "id": "murmur3_32",
+  "family": "murmur",
+  "aliases": [
+   "murmurhash3_x86_32",
+   "murmur3"
+  ],
+  "description": "MurmurHash3 x86_32, seed 0.",
+  "parameters": {
+   "seed": "0"
+  },
+  "signature_constants": [
+   {
+    "value": "0xcc9e2d51",
+    "role": "c1"
+   },
+   {
+    "value": "0x1b873593",
+    "role": "c2"
+   }
+  ],
+  "public_vectors": [
+   {
+    "input_hex": "",
+    "output_hex": "00000000"
+   }
+  ],
+  "validated": true,
+  "validation_note": "Algorithm cross-checked against a published MurmurHash3 x86_32 test vector set (seed 0x9747b28c, not 0): 'aaa'->0x283E0130, 'aaaa'->0x5A97808A, 'Hello, world!'->0x24884CBA, all 3/3 exact matches, confirming the core algorithm; seed=0 itself only trivially changes h1's initial value, found 2026-10-29."
+ },
+ {
+  "id": "jenkins_one_at_a_time",
+  "family": "jenkins",
+  "aliases": [
+   "one-at-a-time",
+   "jenkins"
+  ],
+  "description": "Bob Jenkins' one-at-a-time hash.",
+  "parameters": {},
+  "signature_constants": [],
+  "public_vectors": [
+   {
+    "input_hex": "61",
+    "output_hex": "ca2e9442"
+   },
+   {
+    "input_hex": "54686520717569636b2062726f776e20666f78206a756d7073206f76657220746865206c617a7920646f67",
+    "output_hex": "519e91f5"
+   }
+  ],
+  "validated": true,
+  "validation_note": "Matches the published Jenkins one-at-a-time check values for 'a' (0xca2e9442) and 'The quick brown fox jumps over the lazy dog' (0x519e91f5) from Wikipedia's Jenkins hash function article, found and cross-checked 2026-10-29."
+ }
+]

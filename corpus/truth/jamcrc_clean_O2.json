@@ -1,0 +1,6 @@
+{
+ "program": "jamcrc_clean_O2",
+ "function_symbol": "target",
+ "primitive": "jamcrc",
+ "variant": "clean"
+}

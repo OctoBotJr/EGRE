@@ -1,17 +1,18 @@
-"""Draft reference implementations for all 13 kb/algorithms.json entries.
+"""Reference implementations for every validated kb/algorithms.json entry.
 
-Staged for V-11/V-12 review. Proposed final home: src/egre/knowledge/refs.py
-(mirrors egre.runner.refs.REFERENCES, but for the open-world KB rather than
-the closed-world 4). crc32/adler32/fnv1a32/djb2 already live in
-egre.runner.refs and are NOT duplicated here -- KB_REFERENCES re-exports
-them so there is one implementation per algorithm, not two.
+Mirrors ``egre.runner.refs.REFERENCES``, but for the open-world knowledge
+base (V-11/V-12) rather than the closed-world 4. ``crc32``/``adler32``/
+``fnv1a32``/``djb2`` already live in ``egre.runner.refs`` and are re-exported
+here rather than duplicated, so there is exactly one implementation per
+algorithm.
 
-The 7 entries marked "validated": true in kb/algorithms.json have been
-checked against either a published check value quoted in V2_SPEC.md section
-5.2, or (crc32/adler32/fnv1a32/djb2) v1's existing cross-checks. The other 6
-(fletcher32, djb2a, sdbm, murmur3_32, jenkins_one_at_a_time, elf_hash) are
-implemented here but NOT validated -- see PHASE_D_HANDOFF.md for exactly
-what each one still needs before kb/algorithms.json can mark it true.
+Only algorithms with a validated kb/algorithms.json entry are implemented
+here. ``elf_hash``, ``sdbm`` and ``djb2a`` were deliberately excluded
+(docs/PHASE_D_HANDOFF.md): their formulas looked plausible but none had a
+numeric check value that actually held up -- ``elf_hash`` in particular
+disagreed with a secondary source on every multi-byte input tried. Per
+V2_SPEC.md section 5.2, "entries that fail validation are excluded, not
+guessed" -- they can be added back once genuinely validated.
 """
 
 from __future__ import annotations
@@ -47,20 +48,6 @@ def fnv1_32(data: bytes) -> int:
     for byte in data:
         h = (h * 0x01000193) & _MASK
         h ^= byte
-    return h
-
-
-def djb2a(data: bytes) -> int:
-    h = 5381
-    for byte in data:
-        h = ((h * 33) ^ byte) & _MASK
-    return h
-
-
-def sdbm(data: bytes) -> int:
-    h = 0
-    for byte in data:
-        h = (byte + (h << 6) + (h << 16) - h) & _MASK
     return h
 
 
@@ -125,17 +112,6 @@ def jenkins_one_at_a_time(data: bytes) -> int:
     return h & _MASK
 
 
-def elf_hash(data: bytes) -> int:
-    h = 0
-    for byte in data:
-        h = ((h << 4) + byte) & _MASK
-        high = h & 0xF0000000
-        if high:
-            h ^= high >> 24
-        h &= ~high & _MASK
-    return h & _MASK
-
-
 KB_REFERENCES: dict[str, Reference] = {
     "crc32": crc32,
     "jamcrc": jamcrc,
@@ -145,9 +121,6 @@ KB_REFERENCES: dict[str, Reference] = {
     "fnv1a32": fnv1a32,
     "fnv1_32": fnv1_32,
     "djb2": djb2,
-    "djb2a": djb2a,
-    "sdbm": sdbm,
     "murmur3_32": murmur3_32,
     "jenkins_one_at_a_time": jenkins_one_at_a_time,
-    "elf_hash": elf_hash,
 }

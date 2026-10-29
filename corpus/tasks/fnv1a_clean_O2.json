@@ -1,0 +1,14 @@
+{
+  "program": "fnv1a_clean_O2",
+  "binary": "corpus/bin/fnv1a_clean_O2",
+  "function_addr": 4294968416,
+  "function_size": 48,
+  "signature": "u32 f(const u8*,size_t)",
+  "primitives": [
+    "crc32",
+    "fnv1a32",
+    "adler32",
+    "djb2",
+    "other"
+  ]
+}

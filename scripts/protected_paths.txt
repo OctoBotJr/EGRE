@@ -23,3 +23,5 @@ corpus/src/
 corpus/truth/
 corpus/catalog.json
 corpus/reference_vectors.json
+corpus/held_out_vectors.json
+kb/algorithms.json

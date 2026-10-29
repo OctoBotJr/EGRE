@@ -1,0 +1,6 @@
+{
+ "program": "crc32_clean_O2",
+ "function_symbol": "target",
+ "primitive": "crc32",
+ "variant": "clean"
+}

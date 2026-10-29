@@ -1,0 +1,6 @@
+{
+ "program": "adler32_clean_O2",
+ "function_symbol": "target",
+ "primitive": "adler32",
+ "variant": "clean"
+}
