@@ -66,6 +66,68 @@ def test_openai_adapter_honors_local_settings_and_extracts_full_response(
     assert result.usage.total_tokens == 18
 
 
+def test_openai_adapter_passes_response_format_when_configured(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("OPENAI_BASE_URL", "http://localhost:11434/v1")
+    captured_request: dict[str, object] = {}
+
+    class FakeCompletions:
+        def create(self, **kwargs: object) -> object:
+            captured_request.update(kwargs)
+            message = SimpleNamespace(content='{"action":"finish","hypotheses":{}}')
+            return SimpleNamespace(
+                choices=[SimpleNamespace(message=message)],
+                usage=None,
+                model_dump_json=lambda: "{}",
+            )
+
+    class FakeClient:
+        def __init__(self) -> None:
+            self.chat = SimpleNamespace(completions=FakeCompletions())
+
+    schema = {"type": "json_schema", "json_schema": {"name": "egre_action", "schema": {}}}
+    adapter = OpenAIAdapter(
+        model="qwen3.5:4b",
+        api_key="ollama",
+        response_format=schema,
+        client_factory=lambda **kwargs: FakeClient(),
+    )
+
+    adapter.complete(({"role": "user", "content": "next action"},))
+
+    assert captured_request["response_format"] == schema
+
+
+def test_openai_adapter_omits_response_format_by_default(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("OPENAI_BASE_URL", "http://localhost:11434/v1")
+    captured_request: dict[str, object] = {}
+
+    class FakeCompletions:
+        def create(self, **kwargs: object) -> object:
+            captured_request.update(kwargs)
+            message = SimpleNamespace(content='{"action":"finish"}')
+            return SimpleNamespace(
+                choices=[SimpleNamespace(message=message)],
+                usage=None,
+                model_dump_json=lambda: "{}",
+            )
+
+    class FakeClient:
+        def __init__(self) -> None:
+            self.chat = SimpleNamespace(completions=FakeCompletions())
+
+    adapter = OpenAIAdapter(
+        model="qwen3.5:4b", api_key="ollama", client_factory=lambda **kwargs: FakeClient()
+    )
+
+    adapter.complete(({"role": "user", "content": "next action"},))
+
+    assert "response_format" not in captured_request
+
+
 def test_openai_adapter_explicit_base_url_overrides_environment(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

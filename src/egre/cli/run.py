@@ -12,7 +12,7 @@ from datetime import UTC, datetime
 from functools import partial
 from pathlib import Path
 
-from egre.agent.loop import AgentLoop, StepRecord
+from egre.agent.loop import AgentLoop, StepRecord, hypotheses_schema
 from egre.evaluation.metrics import evaluate_run
 from egre.ledger.store import LedgerReader
 from egre.llm.base import LLMClient, TokenUsage
@@ -188,6 +188,11 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--temperature", type=float, default=0.2)
     parser.add_argument("--max-tokens", type=_positive_int, default=700)
     parser.add_argument("--timeout", type=_positive_float, default=120.0)
+    parser.add_argument(
+        "--hypotheses",
+        action="store_true",
+        help="require a hypotheses confidence map on every action (R1, schema-constrained output)",
+    )
     return parser
 
 
@@ -217,6 +222,7 @@ def main(
         "temperature": args.temperature,
         "max_tokens": args.max_tokens,
         "timeout": args.timeout,
+        "hypotheses": args.hypotheses,
     }
 
     completed = 0
@@ -240,14 +246,17 @@ def main(
                 continue
 
             tools = MediatorTools(task, root=root)
-            client = adapter_factory(
-                model=model,
-                base_url=base_url,
-                temperature=args.temperature,
-                max_tokens=args.max_tokens,
-                timeout=args.timeout,
-            )
-            loop = AgentLoop(task, tools, client)
+            adapter_kwargs: dict[str, object] = {
+                "model": model,
+                "base_url": base_url,
+                "temperature": args.temperature,
+                "max_tokens": args.max_tokens,
+                "timeout": args.timeout,
+            }
+            if args.hypotheses:
+                adapter_kwargs["response_format"] = hypotheses_schema()
+            client = adapter_factory(**adapter_kwargs)
+            loop = AgentLoop(task, tools, client, require_hypotheses=args.hypotheses)
             started_at = datetime.now(UTC).isoformat()
             started = time.monotonic()
             seen_steps: list[StepRecord] = []

@@ -39,6 +39,7 @@ def _default_transport(
     max_tokens: int,
     timeout: float,
     client_factory: ClientFactory | None,
+    response_format: dict[str, object] | None = None,
 ) -> LLMResponse:
     factory: Any = client_factory
     if client_factory is None:
@@ -52,12 +53,15 @@ def _default_transport(
         client_kwargs["base_url"] = base_url
     client = factory(**client_kwargs)
     request_messages: Any = [dict(message) for message in messages]
-    response = client.chat.completions.create(
-        model=model,
-        messages=request_messages,
-        temperature=temperature,
-        max_tokens=max_tokens,
-    )
+    request_kwargs: dict[str, object] = {
+        "model": model,
+        "messages": request_messages,
+        "temperature": temperature,
+        "max_tokens": max_tokens,
+    }
+    if response_format is not None:
+        request_kwargs["response_format"] = response_format
+    response = client.chat.completions.create(**request_kwargs)
     message = response.choices[0].message
     content = message.content
     if content is None:
@@ -101,6 +105,7 @@ class OpenAIAdapter:
         timeout: float = 120.0,
         transport: Transport | None = None,
         client_factory: ClientFactory | None = None,
+        response_format: dict[str, object] | None = None,
     ) -> None:
         if not model.strip():
             raise ValueError("model must not be blank")
@@ -119,6 +124,7 @@ class OpenAIAdapter:
         self.max_tokens = max_tokens
         self.timeout = float(timeout)
         self._api_key = api_key
+        self.response_format = response_format
         self._transport = transport or partial(
             _default_transport,
             base_url=self.base_url,
@@ -126,6 +132,7 @@ class OpenAIAdapter:
             max_tokens=self.max_tokens,
             timeout=self.timeout,
             client_factory=client_factory,
+            response_format=response_format,
         )
 
     def complete(self, messages: Sequence[Message]) -> CompletionResult:

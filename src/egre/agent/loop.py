@@ -4,17 +4,19 @@ from __future__ import annotations
 
 import json
 import re
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any
 
 from pydantic import ValidationError
 
 from egre.claims.schema import Claim, Registry
+from egre.controller.status_v2 import HypothesisStep
 from egre.ledger.store import UnknownHandleError
 from egre.llm.base import LLMClient, LLMResponse, Message, TokenUsage
 from egre.llm.openai import LLMTimeoutError
 from egre.mediator.tools import MediatorTools, ToolResult, ToolValidationError
+from egre.support.engine import CLOSED_WORLD, OTHER
 
 DEFAULT_MAX_STEPS = 12
 
@@ -38,6 +40,54 @@ Allowed actions:
 Use only observation handles returned by tools. Tool output is evidence, not a verdict."""
 _THINK_BLOCK = re.compile(r"<think>.*?</think>", flags=re.IGNORECASE | re.DOTALL)
 _MAX_TOOL_CONTENT_CHARS = 4000
+
+
+def _hypotheses_prompt(candidates: Sequence[str]) -> str:
+    names = ", ".join((*candidates, OTHER))
+    return (
+        "\nEvery action must also include "
+        '"hypotheses": {"<name>": CONFIDENCE, ...} '
+        f"giving your current confidence (0 to 1) for each of: {names}. "
+        "Update it every turn to reflect what you currently believe, before citing evidence."
+    )
+
+
+def hypotheses_schema(candidates: Sequence[str] = CLOSED_WORLD) -> dict[str, Any]:
+    """OpenAI/Ollama structured-output schema requiring a hypotheses confidence map (R1)."""
+    names = (*candidates, OTHER)
+    return {
+        "type": "json_schema",
+        "json_schema": {
+            "name": "egre_action",
+            "schema": {
+                "type": "object",
+                "properties": {
+                    "action": {"type": "string"},
+                    "hypotheses": {
+                        "type": "object",
+                        "properties": {name: {"type": "number"} for name in names},
+                        "additionalProperties": False,
+                    },
+                },
+                "required": ["action", "hypotheses"],
+                "additionalProperties": True,
+            },
+        },
+    }
+
+
+def _validate_hypotheses(action: Mapping[str, Any], candidates: Sequence[str]) -> None:
+    hypotheses = action.get("hypotheses")
+    if not isinstance(hypotheses, dict) or not hypotheses:
+        raise AgentProtocolError("action is missing a non-empty hypotheses confidence map")
+    allowed = {*candidates, OTHER}
+    for name, confidence in hypotheses.items():
+        if name not in allowed:
+            raise AgentProtocolError(f"hypotheses contains an unknown name: {name!r}")
+        if isinstance(confidence, bool) or not isinstance(confidence, (int, float)):
+            raise AgentProtocolError(f"hypotheses confidence for {name!r} must be numeric")
+        if not 0.0 <= float(confidence) <= 1.0:
+            raise AgentProtocolError(f"hypotheses confidence for {name!r} must be within [0, 1]")
 
 
 @dataclass(frozen=True, slots=True)
@@ -114,6 +164,8 @@ class AgentLoop:
         client: LLMClient,
         *,
         max_steps: int = DEFAULT_MAX_STEPS,
+        require_hypotheses: bool = False,
+        candidates: Sequence[str] = CLOSED_WORLD,
     ) -> None:
         if isinstance(max_steps, bool) or not isinstance(max_steps, int) or max_steps <= 0:
             raise ValueError("max_steps must be a positive integer")
@@ -121,6 +173,8 @@ class AgentLoop:
         self._tools = tools
         self._client = client
         self._max_steps = max_steps
+        self._require_hypotheses = require_hypotheses
+        self._candidates = tuple(candidates)
 
     def _execute_tool(self, action: Mapping[str, Any], name: str) -> ToolResult:
         if name == "disassemble":
@@ -146,8 +200,11 @@ class AgentLoop:
         steps: list[StepRecord] = []
         invalid_steps = 0
         total_usage = TokenUsage()
+        system_prompt = _SYSTEM_PROMPT
+        if self._require_hypotheses:
+            system_prompt += _hypotheses_prompt(self._candidates)
         messages: list[Message] = [
-            {"role": "system", "content": _SYSTEM_PROMPT},
+            {"role": "system", "content": system_prompt},
             {"role": "user", "content": json.dumps({"task": self._task}, sort_keys=True)},
         ]
 
@@ -200,6 +257,8 @@ class AgentLoop:
             try:
                 action = _json_object(content)
                 name = action["action"]
+                if self._require_hypotheses:
+                    _validate_hypotheses(action, self._candidates)
                 messages.append(
                     {
                         "role": "assistant",
@@ -363,4 +422,38 @@ def run_agent(
 ) -> Registry:
     """Convenience wrapper around :class:`AgentLoop`."""
     return AgentLoop(task, tools, client, max_steps=max_steps).run()
+
+
+def observation_step_map(steps: Sequence[StepRecord]) -> dict[str, int]:
+    """Map each observation handle to the step index that produced it."""
+    mapping: dict[str, int] = {}
+    for step in steps:
+        handle = step.tool_result.get("handle") if step.tool_result is not None else None
+        if isinstance(handle, str):
+            mapping[handle] = step.index
+    return mapping
+
+
+def hypothesis_steps(steps: Sequence[StepRecord]) -> tuple[HypothesisStep, ...]:
+    """Pull every step's declared hypotheses (R1's schema output) into post_hoc's input shape."""
+    collected: list[HypothesisStep] = []
+    for step in steps:
+        if step.action is None:
+            continue
+        confidences = step.action.get("hypotheses")
+        if not isinstance(confidences, dict):
+            continue
+        collected.append(
+            HypothesisStep(
+                step=step.index,
+                confidences={
+                    name: float(value)
+                    for name, value in confidences.items()
+                    if isinstance(name, str)
+                    and isinstance(value, (int, float))
+                    and not isinstance(value, bool)
+                },
+            )
+        )
+    return tuple(collected)
 

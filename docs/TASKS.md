@@ -64,7 +64,7 @@ acceptance: exact constant-value index plus keyword match over names/aliases/des
 ## Phase E — agent-side improvements
 
 ## V-13 Schema-constrained output with hypotheses field (R1)
-status: todo | depends: V-07 | owner: agent | spend: none
+status: done | depends: V-07 | owner: agent | spend: none
 acceptance: response_format / JSON schema output behind a flag, includes a `hypotheses` list with confidences; fake-client tests; invalid-step accounting unchanged from v1
 
 ## V-14 query_graph tool (R2)
