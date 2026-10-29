@@ -25,7 +25,7 @@ status: done | depends: V-03 | owner: agent | spend: none
 acceptance: networkx graph + JSON export; node/edge types match V2_SPEC.md section 4.2; I9 rebuild-equality test (same ledger+binary+KB -> identical graph)
 
 ## V-05 Support engine: rel, tiers, scoring modes S0/S1
-status: todo | depends: V-04 | owner: agent | spend: none
+status: done | depends: V-04 | owner: agent | spend: none
 acceptance: hand-built ledger fixtures covering every tier (contradicted/none/contested/structural/behavioral), the shared-constant case, and the contradiction case; S0 reproduces v1 results on existing runs exactly; tests in tests/support or equivalent
 
 ## V-06 Status, flags, reason codes v2; per-claim evidence subgraph in report
