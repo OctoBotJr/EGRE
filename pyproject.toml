@@ -19,6 +19,7 @@ re = [
   "unicorn>=2.0",
   "r2pipe>=1.8",
   "lief>=0.15",
+  "networkx>=3.2",
 ]
 # Optional and experimental on Mach-O (CLE's Mach-O backend has limited support)
 symbolic = [

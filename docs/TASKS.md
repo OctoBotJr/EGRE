@@ -21,7 +21,7 @@ status: done | depends: V-02 | owner: agent | spend: none
 acceptance: leaders = entry, branch targets, instruction after branch/ret; every corpus binary yields blocks covering [addr, addr+size) for the target function; decoy dead-branch block exists as its own block; tests on all v1 binaries
 
 ## V-04 Evidence graph builder
-status: todo | depends: V-03 | owner: agent | spend: none
+status: done | depends: V-03 | owner: agent | spend: none
 acceptance: networkx graph + JSON export; node/edge types match V2_SPEC.md section 4.2; I9 rebuild-equality test (same ledger+binary+KB -> identical graph)
 
 ## V-05 Support engine: rel, tiers, scoring modes S0/S1
