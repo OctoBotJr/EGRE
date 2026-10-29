@@ -193,6 +193,11 @@ def _parser() -> argparse.ArgumentParser:
         action="store_true",
         help="require a hypotheses confidence map on every action (R1, schema-constrained output)",
     )
+    parser.add_argument(
+        "--query-graph",
+        action="store_true",
+        help="enable the read-only query_graph tool (R2, needs --hypotheses for R2's full condition)",
+    )
     return parser
 
 
@@ -223,6 +228,7 @@ def main(
         "max_tokens": args.max_tokens,
         "timeout": args.timeout,
         "hypotheses": args.hypotheses,
+        "query_graph": args.query_graph,
     }
 
     completed = 0
@@ -256,7 +262,13 @@ def main(
             if args.hypotheses:
                 adapter_kwargs["response_format"] = hypotheses_schema()
             client = adapter_factory(**adapter_kwargs)
-            loop = AgentLoop(task, tools, client, require_hypotheses=args.hypotheses)
+            loop = AgentLoop(
+                task,
+                tools,
+                client,
+                require_hypotheses=args.hypotheses,
+                enable_query_graph=args.query_graph,
+            )
             started_at = datetime.now(UTC).isoformat()
             started = time.monotonic()
             seen_steps: list[StepRecord] = []

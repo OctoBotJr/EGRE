@@ -68,7 +68,7 @@ status: done | depends: V-07 | owner: agent | spend: none
 acceptance: response_format / JSON schema output behind a flag, includes a `hypotheses` list with confidences; fake-client tests; invalid-step accounting unchanged from v1
 
 ## V-14 query_graph tool (R2)
-status: todo | depends: V-13, V-04 | owner: agent | spend: none
+status: done | depends: V-13, V-04 | owner: agent | spend: none
 acceptance: three fixed read-only queries — constants_in(function), executed_blocks(function), observations(function, kind?) — return handles only; I8 test (tool call never adds or changes citations on a claim)
 
 ## V-15 Reason-code feedback loop, <= 2 revisions (R3)

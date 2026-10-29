@@ -12,15 +12,18 @@ import capstone
 import lief
 
 from egre.graph.cfg import ControlFlowGraph, build_cfg
+from egre.graph.evidence import bb_id, build_evidence_graph
 from egre.ledger.constants import extract_constants
 from egre.ledger.store import Anchor, Ledger, LedgerReader, ObservationKind
 from egre.runner.executor import run_program
+from egre.support.engine import qualified_blocks
 from egre.tracer.emulate import Tracer, TracerError, blocks_touched
 
 _INPUT = re.compile(r"(?:[0-9a-fA-F]{2})*")
 _MAX_INSTRUCTIONS = 256
 _MAX_MEMORY_BYTES = 4096
 _MAX_INPUT_BYTES = 4096
+_QUERIES = frozenset({"constants_in", "executed_blocks", "observations"})
 
 
 class ToolError(RuntimeError):
@@ -203,4 +206,84 @@ class MediatorTools:
         if result.output != native_output:
             return None, True
         return blocks_touched(result, self._cfg), False
+
+    def query_graph(self, query: str, args: Mapping[str, object]) -> dict[str, object]:
+        """Read-only evidence-graph lookups (V2_SPEC.md section 4.3, R2).
+
+        Returns handles and facts the agent already has access to in digest
+        form -- never a verdict, never a citation. Calling this never adds
+        or changes what any claim cites (I8); the agent still has to cite
+        handles itself in a later ``claim`` action. Every query is scoped to
+        the task's one target function; there is no other function to ask
+        about in this prototype.
+        """
+        if query not in _QUERIES:
+            raise ToolValidationError(f"unknown query: {query}")
+        if query == "constants_in":
+            return self._query_constants_in()
+        if query == "executed_blocks":
+            return self._query_executed_blocks()
+        return self._query_observations(args)
+
+    def _query_constants_in(self) -> dict[str, object]:
+        """Only constants the agent has already surfaced via disassemble().
+
+        Deliberately not the full static binary: query_graph digests what is
+        already in the ledger, it does not hand out structural evidence the
+        agent never paid the cost of observing.
+        """
+        graph = build_evidence_graph(self._cfg, self._ledger.reader())
+        executed = qualified_blocks(graph)
+        observations = self._ledger.all()
+        entries: list[dict[str, object]] = []
+        for block in self._cfg.blocks:
+            for value in sorted(extract_constants(block.disasm_lines())):
+                observation_handles = sorted(
+                    observation.handle
+                    for observation in observations
+                    if observation.kind == "disasm"
+                    and value in observation.facts
+                    and observation.anchor.start < block.end
+                    and block.start < observation.anchor.end
+                )
+                if not observation_handles:
+                    continue
+                entries.append(
+                    {
+                        "value": value,
+                        "block_addr": block.start,
+                        "executed": bb_id(block.start) in executed,
+                        "observation_handles": observation_handles,
+                    }
+                )
+        return {"constants": entries}
+
+    def _query_executed_blocks(self) -> dict[str, object]:
+        graph = build_evidence_graph(self._cfg, self._ledger.reader())
+        entries: list[dict[str, object]] = []
+        for block in self._cfg.blocks:
+            run_handles = sorted(
+                source.removeprefix("obs:")
+                for source, _target, edge in graph.in_edges(bb_id(block.start), data=True)
+                if edge.get("type") == "executed"
+            )
+            if run_handles:
+                entries.append({"block_addr": block.start, "run_handles": run_handles})
+        return {"blocks": entries}
+
+    def _query_observations(self, args: Mapping[str, object]) -> dict[str, object]:
+        kind = args.get("kind")
+        if kind is not None and kind not in ("disasm", "memory", "run"):
+            raise ToolValidationError(f"unknown observation kind: {kind!r}")
+        return {
+            "observations": [
+                {
+                    "handle": observation.handle,
+                    "kind": observation.kind,
+                    "anchor": {"start": observation.anchor.start, "end": observation.anchor.end},
+                }
+                for observation in self._ledger.all()
+                if kind is None or observation.kind == kind
+            ]
+        }
 

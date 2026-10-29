@@ -42,6 +42,15 @@ _THINK_BLOCK = re.compile(r"<think>.*?</think>", flags=re.IGNORECASE | re.DOTALL
 _MAX_TOOL_CONTENT_CHARS = 4000
 
 
+_QUERY_GRAPH_PROMPT = """
+{"action":"query_graph","query":"constants_in","args":{}}
+{"action":"query_graph","query":"executed_blocks","args":{}}
+{"action":"query_graph","query":"observations","args":{}} (optionally {"kind":"disasm"|"memory"|"run"})
+query_graph is read-only: it reports facts and handles you already have access to.
+It never decides whether a claim is supported and never cites anything for you \
+-- you must still put handles in cited_handles yourself."""
+
+
 def _hypotheses_prompt(candidates: Sequence[str]) -> str:
     names = ", ".join((*candidates, OTHER))
     return (
@@ -166,6 +175,7 @@ class AgentLoop:
         max_steps: int = DEFAULT_MAX_STEPS,
         require_hypotheses: bool = False,
         candidates: Sequence[str] = CLOSED_WORLD,
+        enable_query_graph: bool = False,
     ) -> None:
         if isinstance(max_steps, bool) or not isinstance(max_steps, int) or max_steps <= 0:
             raise ValueError("max_steps must be a positive integer")
@@ -175,6 +185,7 @@ class AgentLoop:
         self._max_steps = max_steps
         self._require_hypotheses = require_hypotheses
         self._candidates = tuple(candidates)
+        self._enable_query_graph = enable_query_graph
 
     def _execute_tool(self, action: Mapping[str, Any], name: str) -> ToolResult:
         if name == "disassemble":
@@ -201,6 +212,8 @@ class AgentLoop:
         invalid_steps = 0
         total_usage = TokenUsage()
         system_prompt = _SYSTEM_PROMPT
+        if self._enable_query_graph:
+            system_prompt += _QUERY_GRAPH_PROMPT
         if self._require_hypotheses:
             system_prompt += _hypotheses_prompt(self._candidates)
         messages: list[Message] = [
@@ -304,6 +317,21 @@ class AgentLoop:
                             "role": "user",
                             "content": json.dumps(
                                 {"observation": tool_result}, separators=(",", ":"), sort_keys=True
+                            ),
+                        }
+                    )
+                elif name == "query_graph" and self._enable_query_graph:
+                    tool_call = dict(action)
+                    query = _required(action, "query", str)
+                    query_args = action.get("args", {})
+                    if not isinstance(query_args, dict):
+                        raise AgentProtocolError("query_graph args must be an object")
+                    tool_result = self._tools.query_graph(query, query_args)
+                    messages.append(
+                        {
+                            "role": "user",
+                            "content": json.dumps(
+                                {"query_result": tool_result}, separators=(",", ":"), sort_keys=True
                             ),
                         }
                     )
