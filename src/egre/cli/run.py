@@ -206,6 +206,11 @@ def _parser() -> argparse.ArgumentParser:
             "(R3, needs --query-graph for R3's full condition)"
         ),
     )
+    parser.add_argument(
+        "--knowledge",
+        action="store_true",
+        help="enable the lookup_knowledge tool over kb/algorithms.json (R4, open world)",
+    )
     return parser
 
 
@@ -238,6 +243,7 @@ def main(
         "hypotheses": args.hypotheses,
         "query_graph": args.query_graph,
         "revision": args.revision,
+        "knowledge": args.knowledge,
     }
 
     completed = 0
@@ -278,6 +284,7 @@ def main(
                 require_hypotheses=args.hypotheses,
                 enable_query_graph=args.query_graph,
                 enable_revision=args.revision,
+                enable_knowledge=args.knowledge,
             )
             started_at = datetime.now(UTC).isoformat()
             started = time.monotonic()

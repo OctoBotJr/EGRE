@@ -60,6 +60,14 @@ gather more evidence and call revise_claim with the SAME id and better
 citations, or retract_claim if the claim no longer holds. Each claim may be
 revised at most {Registry.MAX_REVISIONS} times."""
 
+_KNOWLEDGE_PROMPT = """
+{"action":"lookup_knowledge","query":STR}
+lookup_knowledge searches a reference list of known algorithms by constant
+value (e.g. "0xEDB88320") or by keyword (name, alias, description). It is
+NOT evidence about this binary -- its "K-<id>" handles cannot be cited in a
+claim. Use it to form hypotheses about what a function might implement,
+never as a substitute for disassembling or running this specific binary."""
+
 
 def _hypotheses_prompt(candidates: Sequence[str]) -> str:
     names = ", ".join((*candidates, OTHER))
@@ -187,6 +195,7 @@ class AgentLoop:
         candidates: Sequence[str] = CLOSED_WORLD,
         enable_query_graph: bool = False,
         enable_revision: bool = False,
+        enable_knowledge: bool = False,
     ) -> None:
         if isinstance(max_steps, bool) or not isinstance(max_steps, int) or max_steps <= 0:
             raise ValueError("max_steps must be a positive integer")
@@ -198,6 +207,7 @@ class AgentLoop:
         self._candidates = tuple(candidates)
         self._enable_query_graph = enable_query_graph
         self._enable_revision = enable_revision
+        self._enable_knowledge = enable_knowledge
 
     def _execute_tool(self, action: Mapping[str, Any], name: str) -> ToolResult:
         if name == "disassemble":
@@ -228,6 +238,8 @@ class AgentLoop:
             system_prompt += _QUERY_GRAPH_PROMPT
         if self._enable_revision:
             system_prompt += _REVISION_PROMPT
+        if self._enable_knowledge:
+            system_prompt += _KNOWLEDGE_PROMPT
         if self._require_hypotheses:
             system_prompt += _hypotheses_prompt(self._candidates)
         messages: list[Message] = [
@@ -346,6 +358,20 @@ class AgentLoop:
                             "role": "user",
                             "content": json.dumps(
                                 {"query_result": tool_result}, separators=(",", ":"), sort_keys=True
+                            ),
+                        }
+                    )
+                elif name == "lookup_knowledge" and self._enable_knowledge:
+                    tool_call = dict(action)
+                    query = _required(action, "query", str)
+                    tool_result = self._tools.lookup_knowledge(query)
+                    messages.append(
+                        {
+                            "role": "user",
+                            "content": json.dumps(
+                                {"knowledge_result": tool_result},
+                                separators=(",", ":"),
+                                sort_keys=True,
                             ),
                         }
                     )

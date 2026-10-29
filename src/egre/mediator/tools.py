@@ -15,6 +15,8 @@ from egre.claims.schema import Claim
 from egre.controller.status_v2 import reason_codes as _compute_reason_codes
 from egre.graph.cfg import ControlFlowGraph, build_cfg
 from egre.graph.evidence import bb_id, build_evidence_graph
+from egre.knowledge.kb import load_kb_entries
+from egre.knowledge.kb import lookup_knowledge as _lookup_knowledge
 from egre.ledger.constants import extract_constants
 from egre.ledger.store import Anchor, Ledger, LedgerReader, ObservationKind
 from egre.runner.executor import run_program
@@ -76,9 +78,10 @@ class MediatorTools:
         if self._function_addr < 0 or self._function_size <= 0:
             raise ToolValidationError("task function range must be non-empty and non-negative")
 
+        self._root = Path(root)
         binary_value = _required_str(task, "binary")
         binary_path = Path(binary_value)
-        self._binary_path = binary_path if binary_path.is_absolute() else Path(root) / binary_path
+        self._binary_path = binary_path if binary_path.is_absolute() else self._root / binary_path
         self._ledger = ledger if ledger is not None else Ledger()
         self.observations: LedgerReader = self._ledger.reader()
 
@@ -92,6 +95,7 @@ class MediatorTools:
         self._cfg: ControlFlowGraph = build_cfg(content, self._function_addr, self._function_size)
         self._tracer: Tracer | None = None
         self._tracer_unavailable = False
+        self._kb_entries: tuple[dict[str, object], ...] | None = None
 
     @property
     def _function_end(self) -> int:
@@ -294,4 +298,19 @@ class MediatorTools:
         task = {"function_addr": self._function_addr, "function_size": self._function_size}
         graph = build_evidence_graph(self._cfg, self._ledger.reader())
         return _compute_reason_codes(claim, self._ledger.reader(), task, graph=graph)
+
+    def lookup_knowledge(self, query: str) -> dict[str, object]:
+        """Lexical lookup into kb/algorithms.json (V2_SPEC.md section 4.3, R4).
+
+        Not evidence (I7): this never touches the ledger, so a returned
+        "K-<id>" handle is not a valid observation handle and can never be
+        cited in a claim -- ``cited_handles`` resolution fails closed on it,
+        same as any other unknown handle (I1). Never reads the held-out
+        verdict vectors (I10); only this KB entry's own public fields (its
+        publicly documented check values) are returned.
+        """
+        if self._kb_entries is None:
+            self._kb_entries = load_kb_entries(self._root)
+        matches = _lookup_knowledge(query, self._kb_entries)
+        return {"matches": [dict(match) for match in matches]}
 

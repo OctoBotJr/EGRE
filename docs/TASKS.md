@@ -50,15 +50,16 @@ acceptance: every agent `run` call is traced automatically (coverage attaches to
 ## Phase D — corpus v2 and knowledge base (human-owned oracles)
 
 ## V-10 New corpus programs, -O2 builds, held-out vectors
-status: todo | depends: V-09 | owner: human | spend: none
+status: done | depends: V-09 | owner: human | spend: none
 acceptance: `fnv1_clean`, `jamcrc_clean`, `crc32c_clean`, `sdbm_execdecoy` added per V2_SPEC.md section 5.1; all 11 programs built at -O0 and -O2, stripped, ad-hoc re-signed (22 binaries); native outputs match reference vectors on all vectors; held-out verdict vectors stored separately from public vectors and never referenced by runtime code
 
 ## V-11 Knowledge base kb/algorithms.json
-status: todo | depends: V-10 | owner: human | spend: none
+status: done | depends: V-10 | owner: human | spend: none
+notes: shipped with 10/13 entries (elf_hash, sdbm, djb2a excluded -- unresolved/unvalidated, see commit)
 acceptance: 13 entries per V2_SPEC.md section 5.2 with id/family/aliases/description/parameters/signature_constants/public_vectors; reference implementations validated against published check values, zlib cross-checks, or two independent implementations; entries that fail validation are excluded, not guessed; validation tests committed
 
 ## V-12 lookup_knowledge tool, knowledge graph nodes
-status: todo | depends: V-11 | owner: agent | spend: none
+status: done | depends: V-11 | owner: agent | spend: none
 acceptance: exact constant-value index plus keyword match over names/aliases/descriptions; returns public KB fields with K- handles; I7 test (no support path passes through a knowledge node); I10 test (held-out vectors never exposed through tools, KB file, or prompts)
 
 ## Phase E — agent-side improvements
