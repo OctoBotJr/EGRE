@@ -15,6 +15,7 @@ from egre.evaluation.metrics import (
     has_duplicate_primitives,
     summarize,
 )
+from egre.evaluation.rescoring import RescoredClaim, is_rescorable, rescore_document
 
 
 @dataclass(frozen=True, slots=True)
@@ -121,6 +122,33 @@ def _render_program_breakdown(runs: Sequence[_CompletedRun]) -> str:
     return "\n".join(lines)
 
 
+_S1_TIER_ORDER = ("behavioral", "structural", "contested", "none", "contradicted")
+
+
+def _render_s1_rescoring(documents: Sequence[Mapping[str, object]]) -> str:
+    rescorable = [document for document in documents if is_rescorable(document)]
+    if not rescorable:
+        return ""
+    rescored: list[RescoredClaim] = [
+        claim for document in rescorable for claim in rescore_document(document)
+    ]
+    lines = [
+        "S1 re-scoring (same claims and ledger, re-judged contrastively)",
+        "tier           true  false",
+    ]
+    for tier_name in _S1_TIER_ORDER:
+        true_count = sum(claim.is_true and claim.s1_tier == tier_name for claim in rescored)
+        false_count = sum(not claim.is_true and claim.s1_tier == tier_name for claim in rescored)
+        lines.append(f"{tier_name:<13}  {true_count:>4}  {false_count:>5}")
+    downgraded = sum(
+        claim.s0_entailed and claim.s1_tier in {"none", "contested", "contradicted"}
+        for claim in rescored
+    )
+    lines.append("")
+    lines.append(f"S0 entailed but S1 <= contested (the blind spot S1 closes): {downgraded}")
+    return "\n".join(lines)
+
+
 def _render_run_directory(path: Path) -> str:
     run_documents = [_read_object(run_path) for run_path in sorted(path.glob("*.json"))]
     completed_runs: list[_CompletedRun] = []
@@ -156,6 +184,10 @@ def _render_run_directory(path: Path) -> str:
         + _render_view_rows(deduplicated.to_document(deduplicated_runs))
         + "\n"
     )
+    completed_documents = [document for document in run_documents if document.get("state") == "completed"]
+    s1_section = _render_s1_rescoring(completed_documents)
+    if s1_section:
+        analysis += "\n" + s1_section + "\n"
     return render_document(summary.to_document(outcomes)) + "\n" + totals + "\n" + analysis
 
 

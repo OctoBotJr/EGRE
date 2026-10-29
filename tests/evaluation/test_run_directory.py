@@ -1,7 +1,10 @@
 import json
+import re
 from pathlib import Path
 
 from egre.evaluation.cli import main
+
+ROOT = Path(__file__).resolve().parents[2]
 
 
 def _run_document(
@@ -130,3 +133,81 @@ def test_evaluation_cli_prints_breakdown_and_deduplicated_views(
     assert "C1         3     2      1      66.7%     66.7%" in output
     assert "C2         1     1      0     100.0%     33.3%" in output
     assert "C3         2     2      0     100.0%     66.7%" in output
+
+
+def test_evaluation_cli_omits_s1_rescoring_when_run_files_lack_ledger_and_claims(
+    capsys, tmp_path: Path
+) -> None:
+    (tmp_path / "a.json").write_text(
+        json.dumps(_run_document(program="crc32_clean", invalid_steps=0, claims=[]))
+    )
+
+    assert main([str(tmp_path)]) == 0
+    output = capsys.readouterr().out
+
+    assert "S1 re-scoring" not in output
+
+
+def test_evaluation_cli_prints_s1_rescoring_when_run_files_carry_claims_and_ledger(
+    capsys, tmp_path: Path
+) -> None:
+    document = _run_document(program="crc32_clean", invalid_steps=0, claims=[])
+    document["claims"] = [
+        {
+            "id": "c1",
+            "function_addr": 0x1000,
+            "primitive": "crc32",
+            "cited_handles": ["obs-000001"],
+            "confidence": 0.9,
+        }
+    ]
+    document["ledger"] = [
+        {
+            "handle": "obs-000001",
+            "kind": "disasm",
+            "tool": "disassemble",
+            "args": {"addr": 0x1000, "count": 4},
+            "anchor": {"start": 0x1000, "end": 0x1010},
+            "payload": "x",
+            "facts": [0xEDB88320],
+            "ts": "2026-01-01T00:00:00+00:00",
+        }
+    ]
+    document["outcome"]["claims"] = [
+        {
+            "claim_id": "c1",
+            "primitive": "crc32",
+            "support": "entailed",
+            "reason": None,
+            "verdict": "confirmed",
+            "status": "verified",
+            "support_gap": False,
+            "is_true": True,
+        }
+    ]
+    (tmp_path / "a.json").write_text(json.dumps(document))
+
+    assert main([str(tmp_path)]) == 0
+    output = capsys.readouterr().out
+
+    assert "S1 re-scoring" in output
+    assert "structural" in output
+
+
+def test_s1_rescoring_of_the_frozen_r0_run_closes_part_of_the_s0_blind_spot(capsys) -> None:
+    frozen = ROOT / "runs" / "ollama-qwen3.5-4b-final"
+
+    assert main([str(frozen)]) == 0
+    output = capsys.readouterr().out
+
+    assert "S1 re-scoring" in output
+    assert "behavioral        2      0" in output
+    assert "structural        4      0" in output
+    assert "contested         1      0" in output
+    assert "none             16      2" in output
+    assert "contradicted      0      0" in output
+    match = re.search(r"S0 entailed but S1 <= contested.*: (\d+)", output)
+    assert match is not None
+    # Of C2's 6 S0-entailed claims, one is only "contested" under S1's
+    # contrastive rules (a rival's signature constant is also present).
+    assert int(match.group(1)) == 1

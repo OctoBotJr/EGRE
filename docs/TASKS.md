@@ -33,7 +33,7 @@ status: done | depends: V-05 | owner: agent | spend: none
 acceptance: status/flags per V2_SPEC.md section 3.6; reason codes per section 3.8; report stays registry-only (test); flags (support_gap, citation_gap, self_contradicted, post_hoc) covered by tests; report includes a Mermaid evidence subgraph per claim
 
 ## V-07 Re-score R0 and scripted runs under S0/S1
-status: todo | depends: V-06 | owner: agent | spend: none
+status: done | depends: V-06 | owner: agent | spend: none
 acceptance: evaluation CLI produces S0/S1 tables for existing runs; scripted-policy S0/S1 cells match V2_SPEC.md section 6 table (rows available at this phase: no tracer yet, so S2 rows deferred to V-09)
 
 ## Phase C — execution qualification
