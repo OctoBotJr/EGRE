@@ -27,11 +27,14 @@ from egre.runner.verify import VerdictValue
 from egre.support.engine import (
     CLOSED_WORLD,
     ClaimSupport,
+    RelFn,
+    RelValue,
     qualified_blocks,
     rel,
     rel_s2,
     tier,
     tier_rank,
+    tier_s2,
 )
 
 StatusValueV2: TypeAlias = Literal["refuted", "verified", "unverified"]
@@ -66,12 +69,12 @@ def derive_flags(
     )
 
 
-def _is_supported(evidence: Sequence[Observation], hypothesis: str) -> bool:
-    return any(rel(observation, hypothesis) == "SUPPORTS" for observation in evidence)
+def _is_supported(evidence: Sequence[Observation], hypothesis: str, rel_fn: RelFn) -> bool:
+    return any(rel_fn(observation, hypothesis) == "SUPPORTS" for observation in evidence)
 
 
-def _is_contradicted(evidence: Sequence[Observation], hypothesis: str) -> bool:
-    return any(rel(observation, hypothesis) == "CONTRADICTS" for observation in evidence)
+def _is_contradicted(evidence: Sequence[Observation], hypothesis: str, rel_fn: RelFn) -> bool:
+    return any(rel_fn(observation, hypothesis) == "CONTRADICTS" for observation in evidence)
 
 
 def _task_range(task: Mapping[str, object]) -> tuple[int, int]:
@@ -115,8 +118,11 @@ def reason_codes(
     Returns an empty tuple when the cited evidence is already structural or
     behavioral, i.e. there is nothing to report back to the agent. Pass the
     evidence graph (egre.graph.evidence, with V-09's "executed" edges) to
-    also get UNEXECUTED_EVIDENCE/UNQUALIFIED_EVIDENCE when a cited constant's
-    S1 support does not hold up under execution qualification.
+    score with S2 (execution-qualified) instead of S1 -- without it, a
+    constant that merely sits in dead code can still read CONTESTED_BY or
+    STRUCTURAL_ONLY, which is exactly what the tracer is supposed to fix.
+    With a graph, also get UNEXECUTED_EVIDENCE/UNQUALIFIED_EVIDENCE when a
+    cited constant's S1 support does not hold up under qualification.
     """
     if not claim.cited_handles:
         return ("NO_CITATION",)
@@ -130,8 +136,20 @@ def reason_codes(
     if not anchored:
         return ("ANCHOR_MISMATCH",)
 
-    cited_tier = tier(claim.primitive, anchored, candidates)
-    available_tier = tier(claim.primitive, ledger.all(), candidates)
+    rel_fn: RelFn
+    if graph is not None:
+        executed = qualified_blocks(graph)
+
+        def rel_fn(observation: Observation, hypothesis: str) -> RelValue:
+            return rel_s2(observation, hypothesis, graph=graph, executed=executed)
+
+        cited_tier = tier_s2(claim.primitive, anchored, candidates, graph=graph)
+        available_tier = tier_s2(claim.primitive, ledger.all(), candidates, graph=graph)
+    else:
+        rel_fn = rel
+        cited_tier = tier(claim.primitive, anchored, candidates)
+        available_tier = tier(claim.primitive, ledger.all(), candidates)
+
     rivals = tuple(candidate for candidate in candidates if candidate != claim.primitive)
 
     codes: list[str] = []
@@ -139,7 +157,7 @@ def reason_codes(
         codes.extend(
             f"CONTRADICTED_BY:{observation.handle}"
             for observation in anchored
-            if rel(observation, claim.primitive) == "CONTRADICTS"
+            if rel_fn(observation, claim.primitive) == "CONTRADICTS"
         )
     elif cited_tier == "none":
         codes.append("NO_SUPPORTING_EVIDENCE")
@@ -147,7 +165,7 @@ def reason_codes(
         codes.extend(
             f"CONTESTED_BY:{rival}"
             for rival in rivals
-            if _is_supported(anchored, rival) and not _is_contradicted(anchored, rival)
+            if _is_supported(anchored, rival, rel_fn) and not _is_contradicted(anchored, rival, rel_fn)
         )
     elif cited_tier == "structural":
         codes.append("STRUCTURAL_ONLY")

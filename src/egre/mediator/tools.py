@@ -11,6 +11,8 @@ from pathlib import Path
 import capstone
 import lief
 
+from egre.claims.schema import Claim
+from egre.controller.status_v2 import reason_codes as _compute_reason_codes
 from egre.graph.cfg import ControlFlowGraph, build_cfg
 from egre.graph.evidence import bb_id, build_evidence_graph
 from egre.ledger.constants import extract_constants
@@ -286,4 +288,10 @@ class MediatorTools:
                 if kind is None or observation.kind == kind
             ]
         }
+
+    def reason_codes(self, claim: Claim) -> tuple[str, ...]:
+        """v2 reason codes for ``claim`` against the current ledger (V2_SPEC.md section 3.8, R3)."""
+        task = {"function_addr": self._function_addr, "function_size": self._function_size}
+        graph = build_evidence_graph(self._cfg, self._ledger.reader())
+        return _compute_reason_codes(claim, self._ledger.reader(), task, graph=graph)
 

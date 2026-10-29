@@ -198,6 +198,14 @@ def _parser() -> argparse.ArgumentParser:
         action="store_true",
         help="enable the read-only query_graph tool (R2, needs --hypotheses for R2's full condition)",
     )
+    parser.add_argument(
+        "--revision",
+        action="store_true",
+        help=(
+            "enable revise_claim/retract_claim and reason-code feedback after each claim "
+            "(R3, needs --query-graph for R3's full condition)"
+        ),
+    )
     return parser
 
 
@@ -229,6 +237,7 @@ def main(
         "timeout": args.timeout,
         "hypotheses": args.hypotheses,
         "query_graph": args.query_graph,
+        "revision": args.revision,
     }
 
     completed = 0
@@ -268,6 +277,7 @@ def main(
                 client,
                 require_hypotheses=args.hypotheses,
                 enable_query_graph=args.query_graph,
+                enable_revision=args.revision,
             )
             started_at = datetime.now(UTC).isoformat()
             started = time.monotonic()

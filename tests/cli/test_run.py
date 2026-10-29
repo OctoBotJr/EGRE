@@ -53,6 +53,7 @@ def test_run_cli_writes_settings_raw_steps_and_resumes_without_network(tmp_path:
         "timeout": 120.0,
         "hypotheses": False,
         "query_graph": False,
+        "revision": False,
     }
     assert document["invalid_steps"] == 1
     assert [step["raw_response"] for step in document["steps"]] == [

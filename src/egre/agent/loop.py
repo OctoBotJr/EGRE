@@ -50,6 +50,16 @@ query_graph is read-only: it reports facts and handles you already have access t
 It never decides whether a claim is supported and never cites anything for you \
 -- you must still put handles in cited_handles yourself."""
 
+_REVISION_PROMPT = f"""
+{{"action":"revise_claim","claim":{{...same shape as claim...}}}}
+{{"action":"retract_claim","claim_id":STR}}
+After a claim is submitted you get back reason_codes describing gaps in its
+cited evidence (e.g. NO_SUPPORTING_EVIDENCE, CONTESTED_BY:<primitive>,
+UNEXECUTED_EVIDENCE, UNQUALIFIED_EVIDENCE). If reason_codes is non-empty,
+gather more evidence and call revise_claim with the SAME id and better
+citations, or retract_claim if the claim no longer holds. Each claim may be
+revised at most {Registry.MAX_REVISIONS} times."""
+
 
 def _hypotheses_prompt(candidates: Sequence[str]) -> str:
     names = ", ".join((*candidates, OTHER))
@@ -176,6 +186,7 @@ class AgentLoop:
         require_hypotheses: bool = False,
         candidates: Sequence[str] = CLOSED_WORLD,
         enable_query_graph: bool = False,
+        enable_revision: bool = False,
     ) -> None:
         if isinstance(max_steps, bool) or not isinstance(max_steps, int) or max_steps <= 0:
             raise ValueError("max_steps must be a positive integer")
@@ -186,6 +197,7 @@ class AgentLoop:
         self._require_hypotheses = require_hypotheses
         self._candidates = tuple(candidates)
         self._enable_query_graph = enable_query_graph
+        self._enable_revision = enable_revision
 
     def _execute_tool(self, action: Mapping[str, Any], name: str) -> ToolResult:
         if name == "disassemble":
@@ -214,6 +226,8 @@ class AgentLoop:
         system_prompt = _SYSTEM_PROMPT
         if self._enable_query_graph:
             system_prompt += _QUERY_GRAPH_PROMPT
+        if self._enable_revision:
+            system_prompt += _REVISION_PROMPT
         if self._require_hypotheses:
             system_prompt += _hypotheses_prompt(self._candidates)
         messages: list[Message] = [
@@ -350,11 +364,44 @@ class AgentLoop:
                         registry.add(claim)
                     except ValueError as exc:
                         raise AgentProtocolError(str(exc)) from exc
+                    feedback: dict[str, object] = {"claim_accepted": claim.id}
+                    if self._enable_revision:
+                        feedback["reason_codes"] = list(self._tools.reason_codes(claim))
+                    messages.append({"role": "user", "content": json.dumps(feedback)})
+                elif name == "revise_claim" and self._enable_revision:
+                    claim_data = action.get("claim")
+                    try:
+                        claim = Claim.model_validate(claim_data, strict=True)
+                    except ValidationError as exc:
+                        raise AgentProtocolError("revise_claim action contains an invalid claim") from exc
+                    try:
+                        for handle in claim.cited_handles:
+                            self._tools.observations.get(handle)
+                    except UnknownHandleError as exc:
+                        raise AgentProtocolError(str(exc)) from exc
+                    try:
+                        registry.revise(claim.id, claim)
+                    except ValueError as exc:
+                        raise AgentProtocolError(str(exc)) from exc
                     messages.append(
                         {
                             "role": "user",
-                            "content": json.dumps({"claim_accepted": claim.id}),
+                            "content": json.dumps(
+                                {
+                                    "claim_revised": claim.id,
+                                    "reason_codes": list(self._tools.reason_codes(claim)),
+                                }
+                            ),
                         }
+                    )
+                elif name == "retract_claim" and self._enable_revision:
+                    claim_id = _required(action, "claim_id", str)
+                    try:
+                        registry.retract(claim_id)
+                    except ValueError as exc:
+                        raise AgentProtocolError(str(exc)) from exc
+                    messages.append(
+                        {"role": "user", "content": json.dumps({"claim_retracted": claim_id})}
                     )
                 elif name == "finish":
                     pass

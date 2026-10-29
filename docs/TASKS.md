@@ -72,7 +72,7 @@ status: done | depends: V-13, V-04 | owner: agent | spend: none
 acceptance: three fixed read-only queries — constants_in(function), executed_blocks(function), observations(function, kind?) — return handles only; I8 test (tool call never adds or changes citations on a claim)
 
 ## V-15 Reason-code feedback loop, <= 2 revisions (R3)
-status: todo | depends: V-14, V-06 | owner: agent | spend: none
+status: done | depends: V-14, V-06 | owner: agent | spend: none
 acceptance: scripted policy that revises a claim after receiving UNEXECUTED_EVIDENCE reaches the expected tier within 2 revisions; revision count capped and tested
 
 ## V-16 Open-world mode (R4)
