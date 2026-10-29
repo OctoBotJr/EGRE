@@ -44,7 +44,7 @@ acceptance: maps Mach-O segments via lief, sets up stack, places input buffer in
 notes: fallback if Unicorn mapping fails or is slow — ship S1 first (already done by V-07), mark constants UNQUALIFIED, record the limitation and keep going
 
 ## V-09 Auto-trace every agent run; scoring mode S2
-status: todo | depends: V-08 | owner: agent | spend: none
+status: done | depends: V-08 | owner: agent | spend: none
 acceptance: every agent `run` call is traced automatically (coverage attaches to the run observation via `executed` edges); on tracer/native output mismatch record `tracer_mismatch`, drop coverage, never change the output; scripted-policy S2 cells match V2_SPEC.md section 6; R0 re-scored under S2 via offline replay-tracing
 
 ## Phase D — corpus v2 and knowledge base (human-owned oracles)

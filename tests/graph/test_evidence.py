@@ -71,7 +71,7 @@ def test_program_layer_blocks_chain_by_cfg_next_and_function_contains_them() -> 
             assert graph.edges[block_node, bb_id(successor)]["type"] == "cfg_next"
 
 
-def test_disasm_observation_anchors_to_overlapping_blocks_run_anchors_to_function_only() -> None:
+def test_disasm_observation_anchors_to_overlapping_blocks_run_gets_executed_edges() -> None:
     cfg, tools, addr, _size = _cfg_and_tools("crc32_clean")
     disasm = tools.disassemble(addr, 48)
     run = tools.run("00")
@@ -80,12 +80,16 @@ def test_disasm_observation_anchors_to_overlapping_blocks_run_anchors_to_functio
 
     disasm_node = f"obs:{disasm.handle}"
     run_node = f"obs:{run.handle}"
-    disasm_targets = {v for _, v, data in graph.out_edges(disasm_node, data=True)}
-    run_targets = {v for _, v, data in graph.out_edges(run_node, data=True)}
+    disasm_edges = {(v, data["type"]) for _, v, data in graph.out_edges(disasm_node, data=True)}
+    run_edges = {(v, data["type"]) for _, v, data in graph.out_edges(run_node, data=True)}
 
-    assert fn_id(addr) in disasm_targets
-    assert any(target.startswith("bb:") for target in disasm_targets)
-    assert run_targets == {fn_id(addr)}
+    assert (fn_id(addr), "anchored_in") in disasm_edges
+    assert any(target.startswith("bb:") and kind == "anchored_in" for target, kind in disasm_edges)
+
+    assert (fn_id(addr), "anchored_in") in run_edges
+    assert all(kind == "executed" for target, kind in run_edges if target.startswith("bb:"))
+    # the real tracer ran this input: at least one block is marked executed, not just anchored
+    assert any(kind == "executed" for _target, kind in run_edges)
 
 
 def test_json_round_trip_preserves_nodes_and_edges() -> None:

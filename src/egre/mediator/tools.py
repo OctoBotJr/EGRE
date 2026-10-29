@@ -11,9 +11,11 @@ from pathlib import Path
 import capstone
 import lief
 
+from egre.graph.cfg import ControlFlowGraph, build_cfg
 from egre.ledger.constants import extract_constants
 from egre.ledger.store import Anchor, Ledger, LedgerReader, ObservationKind
 from egre.runner.executor import run_program
+from egre.tracer.emulate import Tracer, TracerError, blocks_touched
 
 _INPUT = re.compile(r"(?:[0-9a-fA-F]{2})*")
 _MAX_INSTRUCTIONS = 256
@@ -79,6 +81,12 @@ class MediatorTools:
         if not isinstance(binary, lief.MachO.Binary):
             raise ToolError(f"could not parse thin Mach-O binary: {self._binary_path}")
         self._binary = binary
+        content = bytes(
+            binary.get_content_from_virtual_address(self._function_addr, self._function_size)
+        )
+        self._cfg: ControlFlowGraph = build_cfg(content, self._function_addr, self._function_size)
+        self._tracer: Tracer | None = None
+        self._tracer_unavailable = False
 
     @property
     def _function_end(self) -> int:
@@ -154,6 +162,7 @@ class MediatorTools:
             raise ToolValidationError(f"input must be at most {_MAX_INPUT_BYTES} bytes")
 
         output = run_program(self._binary_path, input_hex)
+        coverage, tracer_mismatch = self._trace(input_hex, output)
         anchor = Anchor(start=self._function_addr, end=self._function_end)
         observation = self._ledger.record(
             kind="run",
@@ -161,6 +170,8 @@ class MediatorTools:
             args={"input_hex": input_hex},
             anchor=anchor,
             payload=output,
+            coverage=coverage,
+            tracer_mismatch=tracer_mismatch,
         )
         return ToolResult(
             observation.handle,
@@ -169,4 +180,27 @@ class MediatorTools:
             output,
             frozenset(),
         )
+
+    def _trace(self, input_hex: str, native_output: int) -> tuple[frozenset[int] | None, bool]:
+        """Auto-trace a run (V2_SPEC.md section 4.1/4.4): coverage, or why there is none.
+
+        Never raises and never changes ``native_output``: a tracer that
+        fails or disagrees with the native executor is simply untrusted for
+        this run (``tracer_mismatch=True``, no coverage), not a tool error.
+        """
+        if self._tracer_unavailable:
+            return None, False
+        if self._tracer is None:
+            try:
+                self._tracer = Tracer(self._binary_path, self._function_addr, self._function_size)
+            except TracerError:
+                self._tracer_unavailable = True
+                return None, False
+        try:
+            result = self._tracer.trace(bytes.fromhex(input_hex))
+        except TracerError:
+            return None, True
+        if result.output != native_output:
+            return None, True
+        return blocks_touched(result, self._cfg), False
 

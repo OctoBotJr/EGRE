@@ -6,9 +6,11 @@ is reported separately via the support engine's cited/available tiers
 ``egre.controller.status.derive_status`` did. That v1 function is untouched
 and still drives the S0 evaluation path.
 
-``UNEXECUTED_EVIDENCE`` and ``UNQUALIFIED_EVIDENCE`` (execution-qualification
-reason codes) are not produced here: they require block-execution coverage
-from the tracer, which does not exist until V-09.
+``UNEXECUTED_EVIDENCE`` and ``UNQUALIFIED_EVIDENCE`` are produced only when
+``reason_codes`` is given the evidence graph (V-09): the first means a cited
+constant's block never ran in any traced evidence-graph run; the second
+means no run in the ledger has tracer coverage at all, so execution could
+not be checked either way.
 """
 
 from __future__ import annotations
@@ -17,10 +19,20 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from typing import Literal, TypeAlias
 
+import networkx as nx
+
 from egre.claims.schema import Claim
 from egre.ledger.store import LedgerReader, Observation, UnknownHandleError
 from egre.runner.verify import VerdictValue
-from egre.support.engine import CLOSED_WORLD, ClaimSupport, rel, tier, tier_rank
+from egre.support.engine import (
+    CLOSED_WORLD,
+    ClaimSupport,
+    qualified_blocks,
+    rel,
+    rel_s2,
+    tier,
+    tier_rank,
+)
 
 StatusValueV2: TypeAlias = Literal["refuted", "verified", "unverified"]
 
@@ -76,17 +88,35 @@ def _inside_target(observation: Observation, start: int, end: int) -> bool:
     return start <= observation.anchor.start and observation.anchor.end <= end
 
 
+def _unqualified_disasm_support(
+    anchored: Sequence[Observation], hypothesis: str, graph: nx.DiGraph
+) -> bool:
+    """Whether some anchored disasm observation's S1 support for ``hypothesis``
+    does not survive S2's execution qualification."""
+    executed = qualified_blocks(graph)
+    return any(
+        observation.kind == "disasm"
+        and rel(observation, hypothesis) == "SUPPORTS"
+        and rel_s2(observation, hypothesis, graph=graph, executed=executed) != "SUPPORTS"
+        for observation in anchored
+    )
+
+
 def reason_codes(
     claim: Claim,
     ledger: LedgerReader,
     task: Mapping[str, object],
     *,
     candidates: Sequence[str] = CLOSED_WORLD,
+    graph: nx.DiGraph | None = None,
 ) -> tuple[str, ...]:
     """Reason codes for a claim's cited evidence (V2_SPEC.md section 3.8).
 
     Returns an empty tuple when the cited evidence is already structural or
-    behavioral, i.e. there is nothing to report back to the agent.
+    behavioral, i.e. there is nothing to report back to the agent. Pass the
+    evidence graph (egre.graph.evidence, with V-09's "executed" edges) to
+    also get UNEXECUTED_EVIDENCE/UNQUALIFIED_EVIDENCE when a cited constant's
+    S1 support does not hold up under execution qualification.
     """
     if not claim.cited_handles:
         return ("NO_CITATION",)
@@ -124,6 +154,13 @@ def reason_codes(
 
     if tier_rank(available_tier) > tier_rank(cited_tier):
         codes.append("EVIDENCE_AVAILABLE_NOT_CITED")
+
+    if graph is not None and _unqualified_disasm_support(anchored, claim.primitive, graph):
+        any_trace_exists = any(
+            observation.kind == "run" and observation.coverage is not None
+            for observation in ledger.all()
+        )
+        codes.append("UNEXECUTED_EVIDENCE" if any_trace_exists else "UNQUALIFIED_EVIDENCE")
 
     return tuple(codes)
 

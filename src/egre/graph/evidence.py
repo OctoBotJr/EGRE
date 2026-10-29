@@ -1,11 +1,12 @@
 """Evidence graph: the program's CFG plus the observations anchored to it.
 
 Pure function of (CFG, ledger): rebuilding from the same inputs produces an
-identical graph (invariant I9, V2_SPEC.md section 4.4). The execution,
-knowledge and claim layers from V2_SPEC.md section 4.2 are added by later
-tasks (V-09 auto-trace, V-12 knowledge base, V-06/V-17 claims and
-experiments); this builder only populates the program and observation
-layers it can compute today.
+identical graph (invariant I9, V2_SPEC.md section 4.4). "executed" edges
+(run observation -> block) appear once that run's ``coverage`` was set by
+the tracer (V-09); a run with no coverage (no tracer, or tracer_mismatch)
+gets no block edges at all, only anchored_in to the function. The knowledge
+and claim layers from V2_SPEC.md section 4.2 are added by later tasks
+(V-12 knowledge base, V-06/V-17 claims and experiments).
 """
 
 from __future__ import annotations
@@ -95,7 +96,12 @@ def build_evidence_graph(cfg: ControlFlowGraph, ledger: LedgerReader) -> nx.DiGr
         )
         graph.add_edge(observation_node, function_node, type="anchored_in")
         if observation.kind == "run":
-            continue  # no block-level coverage until the tracer exists (V-09)
+            if observation.coverage:
+                for block_addr in sorted(observation.coverage):
+                    block_node = bb_id(block_addr)
+                    if block_node in graph:
+                        graph.add_edge(observation_node, block_node, type="executed")
+            continue  # no anchored_in edges for runs; coverage (if any) is "executed" instead
         for block in cfg.blocks:
             if observation.anchor.start < block.end and block.start < observation.anchor.end:
                 graph.add_edge(observation_node, bb_id(block.start), type="anchored_in")

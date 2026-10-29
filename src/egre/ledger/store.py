@@ -31,7 +31,15 @@ class Anchor:
 
 @dataclass(frozen=True)
 class Observation:
-    """Immutable evidence emitted by an allowlisted runtime tool."""
+    """Immutable evidence emitted by an allowlisted runtime tool.
+
+    ``coverage`` and ``tracer_mismatch`` are populated only for "run"
+    observations, by the tracer (V2_SPEC.md section 4.1/4.4): ``coverage``
+    is the set of basic-block start addresses the traced execution actually
+    entered, or ``None`` when no trace exists or the tracer's output
+    disagreed with the real native output (``tracer_mismatch=True`` for the
+    latter case). A mismatch never changes the recorded native output.
+    """
 
     handle: str
     kind: ObservationKind
@@ -41,6 +49,8 @@ class Observation:
     payload: ObservationPayload
     facts: frozenset[int]
     ts: str
+    coverage: frozenset[int] | None = None
+    tracer_mismatch: bool = False
 
 
 class LedgerReader:
@@ -77,6 +87,8 @@ class Ledger:
         anchor: Anchor,
         payload: ObservationPayload,
         facts: Iterable[int] = (),
+        coverage: Iterable[int] | None = None,
+        tracer_mismatch: bool = False,
     ) -> Observation:
         handle = f"obs-{len(self._observations) + 1:06d}"
         observation = Observation(
@@ -88,6 +100,8 @@ class Ledger:
             payload=payload,
             facts=frozenset(facts),
             ts=datetime.now(UTC).isoformat(),
+            coverage=frozenset(coverage) if coverage is not None else None,
+            tracer_mismatch=tracer_mismatch,
         )
         self._observations[handle] = observation
         return observation
