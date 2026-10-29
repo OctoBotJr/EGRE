@@ -65,6 +65,7 @@ def _usage_document(usage: TokenUsage) -> dict[str, int | None]:
 def _step_document(step: StepRecord) -> dict[str, object]:
     return {
         "index": step.index,
+        "messages_sent": [dict(message) for message in step.messages_sent],
         "raw_response": step.raw_response,
         "content": step.content,
         "reasoning": step.reasoning,

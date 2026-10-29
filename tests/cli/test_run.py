@@ -57,6 +57,14 @@ def test_run_cli_writes_settings_raw_steps_and_resumes_without_network(tmp_path:
         "local prose",
         '{"action":"finish"}',
     ]
+    first_step_messages = document["steps"][0]["messages_sent"]
+    assert [message["role"] for message in first_step_messages] == ["system", "user"]
+    second_step_messages = document["steps"][1]["messages_sent"]
+    assert [message["role"] for message in second_step_messages] == [
+        "system",
+        "user",
+        "user",
+    ]
     assert document["tool_calls"] == []
     assert document["ledger"] == []
     assert document["claims"] == []

@@ -6,12 +6,12 @@ Human-owned tasks (oracle validation, machine-time gates) are marked `owner: hum
 ## Phase A — baseline and hygiene
 
 ## V-01 Finish v1 P-09/P-10 polish, freeze R0
-status: todo | depends: - | owner: agent | spend: none
+status: done | depends: - | owner: agent | spend: none
 acceptance: evaluation CLI prints dedup counts and per-program table; `runs/ollama-qwen3.5-4b-final` frozen as R0; `docs/RESULTS_PROTOTYPE.md` written; `python -m pytest tests/evaluation -q` passes
 notes: v2 spec section 8, Phase A. Mostly already done in v1 P-09/P-10 — confirm and close any gaps only.
 
 ## V-02 Full per-step context logging
-status: todo | depends: V-01 | owner: agent | spend: none
+status: done | depends: V-01 | owner: agent | spend: none
 acceptance: run files log messages sent, raw response, and parsed action per step; a replay helper reconstructs the exact model context at any step from a run file; tests cover replay equality
 
 ## Phase B — graph and support engine (no tracer)

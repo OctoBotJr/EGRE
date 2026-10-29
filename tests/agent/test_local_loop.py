@@ -124,3 +124,19 @@ def test_step_callback_receives_every_raw_model_response() -> None:
     loop.run_detailed(on_step=lambda step: seen.append(step.raw_response))
 
     assert seen == ["bad", '{"action":"finish"}']
+
+
+def test_step_records_exact_messages_sent_to_the_model() -> None:
+    client = FakeLLM(
+        ['{"action":"disassemble","addr":4096,"count":4}', '{"action":"finish"}']
+    )
+
+    result = _loop(client).run_detailed()
+
+    assert len(result.steps) == 2 == len(client.calls)
+    for step, call in zip(result.steps, client.calls, strict=True):
+        assert step.messages_sent == call
+    # the second call must carry the first step's action and tool observation
+    assert result.steps[1].messages_sent[-2]["role"] == "assistant"
+    assert result.steps[1].messages_sent[-1]["role"] == "user"
+    assert "observation" in result.steps[1].messages_sent[-1]["content"]

@@ -45,6 +45,7 @@ class StepRecord:
     """One audited model response and the action derived from it, if any."""
 
     index: int
+    messages_sent: tuple[Message, ...]
     raw_response: str | None
     content: str | None
     reasoning: str | None
@@ -156,14 +157,16 @@ class AgentLoop:
                 on_step(step)
 
         for index in range(1, self._max_steps + 1):
+            sent_messages = tuple(messages)
             try:
-                completion = self._client.complete(tuple(messages))
+                completion = self._client.complete(sent_messages)
             except LLMTimeoutError as exc:
                 if not tolerate_invalid:
                     raise
                 invalid_steps += 1
                 step = StepRecord(
                     index=index,
+                    messages_sent=sent_messages,
                     raw_response=None,
                     content=None,
                     reasoning=None,
@@ -210,6 +213,7 @@ class AgentLoop:
                 record(
                     StepRecord(
                         index=index,
+                        messages_sent=sent_messages,
                         raw_response=raw_response,
                         content=content,
                         reasoning=reasoning,
@@ -284,6 +288,7 @@ class AgentLoop:
                 record(
                     StepRecord(
                         index=index,
+                        messages_sent=sent_messages,
                         raw_response=raw_response,
                         content=content,
                         reasoning=reasoning,
@@ -299,6 +304,7 @@ class AgentLoop:
             record(
                 StepRecord(
                     index=index,
+                    messages_sent=sent_messages,
                     raw_response=raw_response,
                     content=content,
                     reasoning=reasoning,
