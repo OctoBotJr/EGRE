@@ -1,0 +1,6 @@
+{
+ "program": "sdbm_execdecoy",
+ "function_symbol": "target",
+ "primitive": "sdbm",
+ "variant": "decoy"
+}

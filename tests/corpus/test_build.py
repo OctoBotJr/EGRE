@@ -7,6 +7,8 @@ from typing import Any
 
 import pytest
 
+from egre.corpus.build import BuildError, _opt_flag
+
 ROOT = Path(__file__).resolve().parents[2]
 CATALOG = json.loads((ROOT / "corpus/catalog.json").read_text())
 VECTORS = json.loads((ROOT / "corpus/reference_vectors.json").read_text())
@@ -20,6 +22,17 @@ def _all_keys(value: Any) -> set[str]:
     if isinstance(value, list):
         return {key for child in value for key in _all_keys(child)}
     return set()
+
+
+def test_opt_flag_defaults_to_o0_and_accepts_o2() -> None:
+    assert _opt_flag({"name": "x"}) == "O0"
+    assert _opt_flag({"name": "x", "opt": "O0"}) == "O0"
+    assert _opt_flag({"name": "x", "opt": "O2"}) == "O2"
+
+
+def test_opt_flag_rejects_unsupported_levels() -> None:
+    with pytest.raises(BuildError, match="unsupported optimization level"):
+        _opt_flag({"name": "x", "opt": "O3"})
 
 
 @pytest.mark.toolchain

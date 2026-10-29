@@ -1,0 +1,20 @@
+{
+ "_comment": "V2_SPEC.md section 5.2/4.3: held-out vectors used only by the runner and evaluation (never by any tool the agent can call, and never read by runtime packages -- invariant I10). This file uses a DIFFERENT input set than corpus/reference_vectors.json so none of it is ever visible through disassembly, memory reads, or the public reference_vectors.json. Final location once approved: corpus/held_out_vectors.json, added to scripts/protected_paths.txt alongside the other oracle files. Wire-up (reading this for the final verdict check, I10 test) is V-17's job, not V-10's -- V-10 only needs this file to exist, be separate, and be correct.",
+ "inputs_hex": [
+  "ff",
+  "deadbeef",
+  "48656c6c6f2c20454752452076322e",
+  "0001020304050607",
+  "aabbccddeeff00112233445566778899"
+ ],
+ "expected": {
+  "crc32": ["ff000000", "7c9ca35a", "871e0faf", "88aa689f", "7a5143a0"],
+  "fnv1a32": ["7a0b824e", "045d4bb3", "ebbff320", "6bf6a41d", "8d40fe65"],
+  "adler32": ["01000100", "07ee0339", "25c8045a", "005c001d", "4d1807f9"],
+  "djb2": ["0002b6a4", "7cd9c4fd", "e8483ebe", "cd906921", "4bcd18fd"],
+  "jamcrc": ["00ffffff", "83635ca5", "78e1f050", "77559760", "85aebc5f"],
+  "crc32c": ["ff000000", "f1dc778e", "0298b51f", "8a2cbc3b", "ab9407a7"],
+  "fnv1_32": ["050c5de0", "04c19e03", "8954af3a", "203c3c75", "3526b105"],
+  "sdbm": ["000000ff", "aed7af80", "dde7e88d", "8ae06004", "d03ec088"]
+ }
+}

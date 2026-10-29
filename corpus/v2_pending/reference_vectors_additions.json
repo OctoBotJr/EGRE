@@ -1,0 +1,39 @@
+{
+ "_comment": "Merge these four keys into corpus/reference_vectors.json's existing 'expected' object. Same inputs_hex order as the existing file. Computed from the exact C semantics in the new .c sources (crc=0xFFFFFFFF init, final ~crc for crc32c, no final invert for jamcrc, multiply-then-xor for fnv1_32, Bernstein sdbm recurrence) and cross-checked against the published check values V2_SPEC.md section 5.2 already states (JAMCRC('123456789')=340bc6d9, CRC-32C('123456789')=e3069283, FNV-1_32('a')=050c5d7e) -- all three matched exactly. sdbm has no published check value in the spec; these are from a single implementation only, not yet cross-checked (see PHASE_D_HANDOFF.md).",
+ "jamcrc": [
+  "ffffffff",
+  "174841bc",
+  "cadbbe3d",
+  "340bc6d9",
+  "f2b5ee7a",
+  "6ed98175",
+  "d6fa738c"
+ ],
+ "crc32c": [
+  "00000000",
+  "c1d04330",
+  "364b3fb7",
+  "e3069283",
+  "c99465aa",
+  "46dd794e",
+  "9c44184b"
+ ],
+ "fnv1_32": [
+  "811c9dc5",
+  "050c5d7e",
+  "439c2f4b",
+  "24148816",
+  "548da96f",
+  "c3b79145",
+  "8e8881c5"
+ ],
+ "sdbm": [
+  "00000000",
+  "00000061",
+  "3025f862",
+  "68a07035",
+  "19ae84c4",
+  "ca878010",
+  "35fc0080"
+ ]
+}

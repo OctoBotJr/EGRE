@@ -53,6 +53,13 @@ def _target_range(binary_path: Path) -> tuple[int, int]:
     return target.value, function_size
 
 
+def _opt_flag(entry: dict[str, Any]) -> str:
+    opt = entry.get("opt", "O0")
+    if opt not in ("O0", "O2"):
+        raise BuildError(f"unsupported optimization level {opt!r} for {entry.get('name')!r}")
+    return opt
+
+
 def _task(program: str, function_addr: int, function_size: int) -> dict[str, Any]:
     return {
         "program": program,
@@ -75,12 +82,13 @@ def build() -> None:
         source = ROOT / entry["source"]
         unstripped = BUILD_DIR / program
         destination = BIN_DIR / program
+        opt = _opt_flag(entry)
 
         _run(
             "clang",
             "-arch",
             "arm64",
-            "-O0",
+            f"-{opt}",
             f"-I{CORPUS / 'src'}",
             str(source),
             "-o",
