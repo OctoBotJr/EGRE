@@ -55,19 +55,20 @@ def test_detector_catches_violations(tmp_path):
     assert violations(f, LLM) == ["openai"]
 
 
-def test_held_out_vectors_are_not_yet_referenced_by_runtime_code():
-    """I10: held-out verdict vectors are never exposed through the KB, tools or prompts.
+AGENT_FACING = ["agent", "mediator", "ledger", "claims", "contracts", "controller", "report"]
 
-    Nothing should read corpus/held_out_vectors.json yet -- that wiring is
-    V-17's experiment designer, which must read it only inside the runner,
-    never surface it through a tool result or system prompt. If this test
-    starts failing, that's the signal V-17 has started and needs its own
-    dedicated I10 test (asserting the mediator/agent packages specifically
-    never touch it), not a blanket "nothing touches it" check.
+
+def test_held_out_vectors_are_never_referenced_by_agent_facing_code():
+    """I10: held-out verdict vectors are never exposed through a tool, the
+    agent loop, or a prompt. V-17's experiment designer (egre.runner) is the
+    one place allowed to read corpus/held_out_vectors.json, since the
+    verdict it produces is computed offline, after the agent has already
+    finished -- so "runner" is deliberately excluded from this check
+    (AGENT_FACING is RUNTIME minus "runner"), not from the invariant.
     """
     hits = {
         str(path): None
-        for pkg in RUNTIME
+        for pkg in AGENT_FACING
         for path in py_files(pkg)
         if "held_out_vectors" in path.read_text()
     }

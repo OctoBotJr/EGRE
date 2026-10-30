@@ -77,11 +77,11 @@ status: done | depends: V-14, V-06 | owner: agent | spend: none
 acceptance: scripted policy that revises a claim after receiving UNEXECUTED_EVIDENCE reaches the expected tier within 2 revisions; revision count capped and tested
 
 ## V-16 Open-world mode (R4)
-status: todo | depends: V-12, V-14 | owner: agent | spend: none
+status: done | depends: V-12, V-14 | owner: agent | spend: none
 acceptance: H = all KB entries + other; P4 on fnv1_clean and jamcrc_clean yields `contested` per V2_SPEC.md section 6
 
 ## V-17 Experiment designer (discriminating inputs)
-status: todo | depends: V-11 | owner: agent | spend: none
+status: done | depends: V-11 | owner: agent | spend: none
 acceptance: for the live hypothesis set, designer chooses inputs maximizing distinct predicted outputs; every pair of KB hypotheses is separated by at least one designed input or reported as indistinguishable; designed inputs are generated, not copied from public KB vectors; feeds the verdict runner
 
 ## Phase F — evaluation
