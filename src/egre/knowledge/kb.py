@@ -68,6 +68,16 @@ def _keyword_matches(entry: dict[str, Any], needle: str) -> bool:
     return needle in haystack
 
 
+def open_world_candidates(entries: tuple[dict[str, Any], ...]) -> tuple[str, ...]:
+    """The open-world hypothesis set (V2_SPEC.md section 3.1, V-16): every KB entry id."""
+    return tuple(entry["id"] for entry in entries)
+
+
+def open_world_signatures(entries: tuple[dict[str, Any], ...]) -> dict[str, frozenset[int]]:
+    """Signature-constant map for every KB entry, in the shape ``egre.support.engine.rel`` expects."""
+    return {entry["id"]: frozenset(_constant_values(entry)) for entry in entries}
+
+
 def lookup_knowledge(query: str, entries: tuple[dict[str, Any], ...]) -> tuple[dict[str, Any], ...]:
     """Exact constant-value match if ``query`` parses as a number, else a keyword match."""
     stripped = query.strip()

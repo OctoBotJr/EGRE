@@ -36,6 +36,25 @@ def test_exact_constant_match_accepts_decimal_too() -> None:
     assert {m["id"] for m in hex_matches} == {m["id"] for m in decimal_matches}
 
 
+def test_djb2_and_adler32_constants_are_stored_hex_encoded_not_decimal() -> None:
+    """Regression: every signature_constants "value" must be a hex string, so
+    _constant_values() parses it the same way for every entry. djb2 and
+    adler32 used to be stored as plain decimal ("5381", "65521") -- since
+    _parse_constant/_constant_values always read stored values as hex, that
+    silently meant 0x5381 (21377) and 0x65521, not the real constants, and
+    nothing matched a lookup for the real decimal values at all."""
+    entries = load_kb_entries(ROOT)
+
+    djb2 = next(entry for entry in entries if entry["id"] == "djb2")
+    adler32 = next(entry for entry in entries if entry["id"] == "adler32")
+    assert djb2["signature_constants"][0]["value"].lower() == "0x1505"
+    assert adler32["signature_constants"][0]["value"].lower() == "0xfff1"
+
+    assert {m["id"] for m in lookup_knowledge(str(5381), entries)} == {"djb2"}
+    assert {m["id"] for m in lookup_knowledge(str(65521), entries)} == {"adler32"}
+    assert {m["id"] for m in lookup_knowledge("0x1505", entries)} == {"djb2"}
+
+
 def test_shared_fnv_constant_matches_both_fnv_variants() -> None:
     entries = load_kb_entries(ROOT)
 

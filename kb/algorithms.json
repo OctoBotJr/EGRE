@@ -98,7 +98,7 @@
   },
   "signature_constants": [
    {
-    "value": "65521",
+    "value": "0xFFF1",
     "role": "modulus"
    }
   ],
@@ -212,7 +212,7 @@
   },
   "signature_constants": [
    {
-    "value": "5381",
+    "value": "0x1505",
     "role": "seed"
    }
   ],

@@ -36,6 +36,10 @@ def _observation(messages: Sequence[Message]) -> dict[str, Any]:
     return _message_object(messages, "observation")
 
 
+def _query_result(messages: Sequence[Message]) -> dict[str, Any]:
+    return _message_object(messages, "query_result")
+
+
 def _claim(
     claim_id: str,
     addr: int,
@@ -173,7 +177,59 @@ class PriorGuesserPolicy:
         return '{"action":"finish"}'
 
 
+class TraceQualifiedGrepperPolicy:
+    """P4: run once, then claim hypotheses whose constants sit in an executed
+    block, citing the disassembly only (V2_SPEC.md section 6). Needs the
+    agent loop built with ``enable_query_graph=True``."""
+
+    _RUN_INPUT = "61"
+
+    def __init__(self) -> None:
+        self._phase = "disassemble"
+        self._handle = ""
+        self._matches: list[str] | None = None
+
+    def complete(self, messages: Sequence[Message]) -> str:
+        task = _task(messages)
+        addr = task["function_addr"]
+        size = task["function_size"]
+        if not isinstance(addr, int) or not isinstance(size, int):
+            raise TypeError("scripted policy requires an integer function range")
+
+        if self._phase == "disassemble":
+            self._phase = "await_run"
+            return json.dumps(
+                {"action": "disassemble", "addr": addr, "count": min(256, (size + 3) // 4)}
+            )
+        if self._phase == "await_run":
+            observation = _observation(messages)
+            handle = observation.get("handle")
+            if not isinstance(handle, str):
+                raise RuntimeError("disassembly observation has invalid handle")
+            self._handle = handle
+            self._phase = "await_query"
+            return json.dumps({"action": "run", "input_hex": self._RUN_INPUT})
+        if self._phase == "await_query":
+            self._phase = "claim"
+            return json.dumps({"action": "query_graph", "query": "constants_in", "args": {}})
+
+        if self._matches is None:
+            result = _query_result(messages)
+            constants = result.get("constants")
+            if not isinstance(constants, list):
+                raise RuntimeError("query_graph constants_in result is malformed")
+            executed_values = {entry["value"] for entry in constants if entry.get("executed") is True}
+            self._matches = [
+                primitive for primitive, signature in _SIGNATURES.items() if signature & executed_values
+            ]
+        if self._matches:
+            primitive = self._matches.pop(0)
+            return _claim(f"p4-{primitive}", addr, primitive, [self._handle], 0.85)
+        return '{"action":"finish"}'
+
+
 P1Grepper = GrepperPolicy
 P2Emulator = EmulatorPolicy
 P3PriorGuesser = PriorGuesserPolicy
+P4TraceQualifiedGrepper = TraceQualifiedGrepperPolicy
 

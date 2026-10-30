@@ -41,3 +41,14 @@ def test_kb_references_has_no_unvalidated_extras() -> None:
     """KB_REFERENCES should only serve algorithms the KB file actually lists."""
     entry_ids = {entry["id"] for entry in ENTRIES}
     assert set(KB_REFERENCES) == entry_ids
+
+
+def test_every_signature_constant_is_hex_encoded() -> None:
+    """egre.knowledge.kb._constant_values always parses "value" as hex -- a
+    plain decimal string (e.g. "5381") would silently be misread as a
+    different number (0x5381 = 21377). Every entry must use a "0x..." form."""
+    for entry in ENTRIES:
+        for constant in entry["signature_constants"]:
+            value = constant["value"]
+            assert value.lower().startswith("0x"), (entry["id"], value)
+            int(value, 16)  # must actually parse

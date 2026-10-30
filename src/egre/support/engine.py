@@ -30,6 +30,7 @@ from egre.runner.refs import REFERENCES
 
 RelValue: TypeAlias = Literal["SUPPORTS", "CONTRADICTS", "NEUTRAL"]
 Tier: TypeAlias = Literal["contradicted", "none", "contested", "structural", "behavioral"]
+Reference: TypeAlias = Callable[[bytes], int]
 
 OTHER = "other"
 CLOSED_WORLD: tuple[str, ...] = tuple(SIGNATURE_CONSTANTS)
@@ -47,8 +48,8 @@ def tier_rank(value: Tier) -> int:
     return _TIER_RANK[value]
 
 
-def _rel_run(observation: Observation, hypothesis: str) -> RelValue:
-    reference = REFERENCES.get(hypothesis)
+def _rel_run(observation: Observation, hypothesis: str, references: Mapping[str, Reference]) -> RelValue:
+    reference = references.get(hypothesis)
     if reference is None:
         return "NEUTRAL"
     input_hex = observation.args.get("input_hex")
@@ -63,17 +64,29 @@ def _rel_run(observation: Observation, hypothesis: str) -> RelValue:
     return "SUPPORTS" if observation.payload == reference(input_bytes) else "CONTRADICTS"
 
 
-def _rel_disasm(observation: Observation, hypothesis: str) -> RelValue:
-    signature = SIGNATURE_CONSTANTS.get(hypothesis, frozenset())
+def _rel_disasm(observation: Observation, hypothesis: str, signatures: Mapping[str, frozenset[int]]) -> RelValue:
+    signature = signatures.get(hypothesis, frozenset())
     return "NEUTRAL" if observation.facts.isdisjoint(signature) else "SUPPORTS"
 
 
-def rel(observation: Observation, hypothesis: str) -> RelValue:
-    """rel(o, h) under S1: contrastive, execution-unqualified (V2_SPEC.md section 3.2)."""
+def rel(
+    observation: Observation,
+    hypothesis: str,
+    *,
+    signatures: Mapping[str, frozenset[int]] = SIGNATURE_CONSTANTS,
+    references: Mapping[str, Reference] = REFERENCES,
+) -> RelValue:
+    """rel(o, h) under S1: contrastive, execution-unqualified (V2_SPEC.md section 3.2).
+
+    ``signatures``/``references`` default to the closed-world 4; pass the
+    knowledge base's instead (``egre.knowledge.kb.open_world_signatures``,
+    ``egre.knowledge.refs.KB_REFERENCES``) for open-world mode (V-16) --
+    nothing else about this function changes between the two modes.
+    """
     if observation.kind == "run":
-        return _rel_run(observation, hypothesis)
+        return _rel_run(observation, hypothesis, references)
     if observation.kind == "disasm":
-        return _rel_disasm(observation, hypothesis)
+        return _rel_disasm(observation, hypothesis, signatures)
     return "NEUTRAL"
 
 
@@ -90,17 +103,21 @@ def rel_s2(
     *,
     graph: nx.DiGraph,
     executed: frozenset[str],
+    signatures: Mapping[str, frozenset[int]] = SIGNATURE_CONSTANTS,
+    references: Mapping[str, Reference] = REFERENCES,
 ) -> RelValue:
     """rel(o, h) under S2: a disasm constant SUPPORTS only if its block ran.
 
     Run observations are unaffected by execution qualification -- their
-    relation is purely output-vs-reference, same as S1.
+    relation is purely output-vs-reference, same as S1. ``signatures``/
+    ``references`` default to the closed-world 4; see :func:`rel` for the
+    open-world override.
     """
     if observation.kind == "run":
-        return _rel_run(observation, hypothesis)
+        return _rel_run(observation, hypothesis, references)
     if observation.kind != "disasm":
         return "NEUTRAL"
-    signature = SIGNATURE_CONSTANTS.get(hypothesis, frozenset())
+    signature = signatures.get(hypothesis, frozenset())
     if observation.facts.isdisjoint(signature):
         return "NEUTRAL"
 
@@ -150,16 +167,27 @@ def tier(
     evidence: Sequence[Observation],
     candidates: Sequence[str] = CLOSED_WORLD,
     *,
-    rel_fn: RelFn = rel,
+    rel_fn: RelFn | None = None,
+    signatures: Mapping[str, frozenset[int]] = SIGNATURE_CONSTANTS,
+    references: Mapping[str, Reference] = REFERENCES,
 ) -> Tier:
     """Support tier of ``hypothesis`` given ``evidence`` (V2_SPEC.md section 3.3).
 
-    ``candidates`` is the closed-world hypothesis set excluding ``other``;
-    ``other`` is handled by its own rule, not as a regular rival, since it
-    has no reference implementation a run could support or contradict.
-    ``rel_fn`` defaults to S1's :func:`rel`; pass a closure over :func:`rel_s2`
-    (see :func:`tier_s2`) to compute the execution-qualified tier instead.
+    ``candidates`` is the hypothesis set excluding ``other`` -- the
+    closed-world 4 by default, or the knowledge base's entries for
+    open-world mode (V-16); ``other`` is handled by its own rule, not as a
+    regular rival, since it has no reference implementation a run could
+    support or contradict. ``signatures``/``references`` feed the default
+    S1 :func:`rel` (swap them for open-world lookups); pass ``rel_fn``
+    explicitly instead to compute the execution-qualified S2 tier (see
+    :func:`tier_s2`) -- it then takes full precedence over both.
     """
+    if rel_fn is None:
+        default_signatures, default_references = signatures, references
+
+        def rel_fn(observation: Observation, h: str) -> RelValue:
+            return rel(observation, h, signatures=default_signatures, references=default_references)
+
     if hypothesis == OTHER:
         if candidates and all(_contradicted(evidence, candidate, rel_fn) for candidate in candidates):
             return "behavioral"
@@ -194,12 +222,20 @@ def tier_s2(
     candidates: Sequence[str] = CLOSED_WORLD,
     *,
     graph: nx.DiGraph,
+    signatures: Mapping[str, frozenset[int]] = SIGNATURE_CONSTANTS,
+    references: Mapping[str, Reference] = REFERENCES,
 ) -> Tier:
-    """S2 tier: :func:`tier` with execution-qualified disassembly support."""
+    """S2 tier: :func:`tier` with execution-qualified disassembly support.
+
+    ``signatures``/``references`` default to the closed-world 4; pass the
+    knowledge base's instead for open-world mode (V-16).
+    """
     executed = qualified_blocks(graph)
 
     def rel_fn(observation: Observation, h: str) -> RelValue:
-        return rel_s2(observation, h, graph=graph, executed=executed)
+        return rel_s2(
+            observation, h, graph=graph, executed=executed, signatures=signatures, references=references
+        )
 
     return tier(hypothesis, evidence, candidates, rel_fn=rel_fn)
 
@@ -219,16 +255,22 @@ def evaluate_claim(
     ledger: LedgerReader,
     *,
     candidates: Sequence[str] = CLOSED_WORLD,
+    signatures: Mapping[str, frozenset[int]] = SIGNATURE_CONSTANTS,
+    references: Mapping[str, Reference] = REFERENCES,
 ) -> ClaimSupport:
     """S1 cited-vs-available tiers for ``claim``.
 
     Raises ``UnknownHandleError`` if a cited handle was never issued by the
-    ledger; callers decide how that becomes a reason code.
+    ledger; callers decide how that becomes a reason code. ``signatures``/
+    ``references`` default to the closed-world 4; pass the knowledge base's
+    instead for open-world mode (V-16).
     """
     cited = tuple(ledger.get(handle) for handle in claim.cited_handles)
     available = ledger.all()
-    cited_tier = tier(claim.primitive, cited, candidates)
-    available_tier = tier(claim.primitive, available, candidates)
+    cited_tier = tier(claim.primitive, cited, candidates, signatures=signatures, references=references)
+    available_tier = tier(
+        claim.primitive, available, candidates, signatures=signatures, references=references
+    )
     return ClaimSupport(
         cited_tier=cited_tier,
         available_tier=available_tier,
@@ -243,16 +285,24 @@ def evaluate_claim_s2(
     graph: nx.DiGraph,
     *,
     candidates: Sequence[str] = CLOSED_WORLD,
+    signatures: Mapping[str, frozenset[int]] = SIGNATURE_CONSTANTS,
+    references: Mapping[str, Reference] = REFERENCES,
 ) -> ClaimSupport:
     """S2 cited-vs-available tiers for ``claim``, execution-qualified via ``graph``.
 
     ``graph`` must be built from the same ``ledger`` (egre.graph.evidence),
     so its "executed" edges reflect every run's tracer coverage.
+    ``signatures``/``references`` default to the closed-world 4; pass the
+    knowledge base's instead for open-world mode (V-16).
     """
     cited = tuple(ledger.get(handle) for handle in claim.cited_handles)
     available = ledger.all()
-    cited_tier = tier_s2(claim.primitive, cited, candidates, graph=graph)
-    available_tier = tier_s2(claim.primitive, available, candidates, graph=graph)
+    cited_tier = tier_s2(
+        claim.primitive, cited, candidates, graph=graph, signatures=signatures, references=references
+    )
+    available_tier = tier_s2(
+        claim.primitive, available, candidates, graph=graph, signatures=signatures, references=references
+    )
     return ClaimSupport(
         cited_tier=cited_tier,
         available_tier=available_tier,
