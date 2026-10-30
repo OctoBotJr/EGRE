@@ -91,7 +91,7 @@ status: done | depends: V-09, V-17 | owner: agent | spend: none
 acceptance: deterministic scripted-policy table (P1-P4) matches V2_SPEC.md section 6 on all 22 binaries; coverage and all rates (citation-gap, self-contradiction, contested, post-hoc, reason-code counts) computed per program and per variant
 
 ## V-19 Counterfactual probe (H7)
-status: todo | depends: V-02, V-18 | owner: agent | spend: none
+status: done | depends: V-02, V-18 | owner: agent | spend: none
 acceptance: offline replay rebuilds exact per-step context, swaps cited evidence for a rival's (and a remove-evidence variant), queries the model 3x at temperature 0 / fixed seed; evidence-sensitive vs evidence-insensitive classification per claim; fake-client tests; LLM is subject only (I11)
 
 ## V-20 Full R1-R4 run with local model, re-score, write results
