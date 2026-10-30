@@ -52,6 +52,7 @@ def test_run_cli_writes_settings_raw_steps_and_resumes_without_network(tmp_path:
         "max_tokens": 700,
         "timeout": 120.0,
         "hypotheses": False,
+        "structured_output": False,
         "query_graph": False,
         "revision": False,
         "knowledge": False,
@@ -79,7 +80,11 @@ def test_run_cli_writes_settings_raw_steps_and_resumes_without_network(tmp_path:
 
 
 @pytest.mark.toolchain
-def test_run_cli_hypotheses_flag_requires_schema_and_sets_response_format(tmp_path: Path) -> None:
+def test_run_cli_hypotheses_flag_alone_never_sends_response_format(tmp_path: Path) -> None:
+    """Some local backends (e.g. certain Ollama runners) return HTTP 501 for
+    response_format entirely -- --hypotheses must work via prompt +
+    validation alone without it, confirmed against a real local model
+    during V-20 (see docs/STATUS.md)."""
     out = tmp_path / "local-run"
     captured: dict[str, object] = {}
 
@@ -110,10 +115,48 @@ def test_run_cli_hypotheses_flag_requires_schema_and_sets_response_format(tmp_pa
     assert main(argv, root=ROOT, adapter_factory=adapter_factory) == 0
     document = json.loads((out / "crc32_clean-repeat-001.json").read_text())
 
-    assert "response_format" in captured
+    assert "response_format" not in captured
     assert document["settings"]["hypotheses"] is True
+    assert document["settings"]["structured_output"] is False
     assert document["invalid_steps"] == 0
     assert document["steps"][0]["action"]["hypotheses"]["crc32"] == 0.9
+
+
+@pytest.mark.toolchain
+def test_run_cli_structured_output_flag_sets_response_format(tmp_path: Path) -> None:
+    out = tmp_path / "local-run"
+    captured: dict[str, object] = {}
+
+    def adapter_factory(**kwargs: object) -> FakeLLM:
+        captured.update(kwargs)
+        action_json = (
+            '{"action":"finish","hypotheses":{"crc32":0.9,"fnv1a32":0.05,'
+            '"adler32":0.03,"djb2":0.01,"other":0.01}}'
+        )
+        return FakeLLM([action_json])
+
+    argv = [
+        "--llm",
+        "openai",
+        "--model",
+        "qwen3.5:4b",
+        "--base-url",
+        LOCAL_OLLAMA_BASE_URL,
+        "--programs",
+        "crc32_clean",
+        "--repeats",
+        "1",
+        "--out",
+        str(out),
+        "--hypotheses",
+        "--structured-output",
+    ]
+
+    assert main(argv, root=ROOT, adapter_factory=adapter_factory) == 0
+    document = json.loads((out / "crc32_clean-repeat-001.json").read_text())
+
+    assert "response_format" in captured
+    assert document["settings"]["structured_output"] is True
 
 
 def test_run_cli_rejects_nonlocal_base_url(tmp_path: Path) -> None:

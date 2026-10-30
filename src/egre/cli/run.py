@@ -194,6 +194,16 @@ def _parser() -> argparse.ArgumentParser:
         help="require a hypotheses confidence map on every action (R1, schema-constrained output)",
     )
     parser.add_argument(
+        "--structured-output",
+        action="store_true",
+        help=(
+            "also send response_format (JSON schema) to the provider for --hypotheses, on top of "
+            "the prompt instruction and validation. Some local backends (e.g. certain Ollama "
+            "runners) return HTTP 501 for response_format at all; --hypotheses alone still works "
+            "via prompt + validation without this."
+        ),
+    )
+    parser.add_argument(
         "--query-graph",
         action="store_true",
         help="enable the read-only query_graph tool (R2, needs --hypotheses for R2's full condition)",
@@ -241,6 +251,7 @@ def main(
         "max_tokens": args.max_tokens,
         "timeout": args.timeout,
         "hypotheses": args.hypotheses,
+        "structured_output": args.structured_output,
         "query_graph": args.query_graph,
         "revision": args.revision,
         "knowledge": args.knowledge,
@@ -274,7 +285,7 @@ def main(
                 "max_tokens": args.max_tokens,
                 "timeout": args.timeout,
             }
-            if args.hypotheses:
+            if args.hypotheses and args.structured_output:
                 adapter_kwargs["response_format"] = hypotheses_schema()
             client = adapter_factory(**adapter_kwargs)
             loop = AgentLoop(
