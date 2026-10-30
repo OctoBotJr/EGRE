@@ -87,7 +87,7 @@ acceptance: for the live hypothesis set, designer chooses inputs maximizing dist
 ## Phase F — evaluation
 
 ## V-18 Metrics v2: views C1/C2s/C2b/C3/J
-status: todo | depends: V-09, V-17 | owner: agent | spend: none
+status: done | depends: V-09, V-17 | owner: agent | spend: none
 acceptance: deterministic scripted-policy table (P1-P4) matches V2_SPEC.md section 6 on all 22 binaries; coverage and all rates (citation-gap, self-contradiction, contested, post-hoc, reason-code counts) computed per program and per variant
 
 ## V-19 Counterfactual probe (H7)
